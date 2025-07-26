@@ -1,0 +1,15 @@
+# Compiler files
+cache/
+out/
+
+# Tests coverage
+coverage/
+
+# Broadcast logs
+broadcast/
+
+# Docs
+docs/
+
+# Env files
+.env*
