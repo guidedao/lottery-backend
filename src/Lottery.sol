@@ -2,5 +2,6 @@
 pragma solidity ^0.8.30;
 
 import {ILottery} from "./interfaces/ILoterry.sol";
+import {ILotteryErrors} from "./interfaces/ILotteryErrors.sol";
 
-contract Lottery is ILottery {}
+abstract contract Lottery is ILottery, ILotteryErrors {}
