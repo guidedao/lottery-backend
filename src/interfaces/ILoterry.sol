@@ -63,7 +63,7 @@ interface ILottery {
      * The `participant`'s refund deadline has expired, and organizer
      * collected that money.
      */
-    event ExpiredRefundCollected(address indexed participant, uint256 amount);
+    event ExpiredRefundCollected(address indexed participant);
 
     /**
      * @notice Returns ticket (entrance) price.
