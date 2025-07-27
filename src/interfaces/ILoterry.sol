@@ -102,7 +102,7 @@ interface ILottery {
     function enter(bytes calldata _encryptedContactDetails) external payable;
 
     /**
-     * @notice Quit the lottery.
+     * @notice Quit the lottery and receive some part of money back.
      * @dev Emits {ParticipantQuitted}.
      *
      * Requirements:
