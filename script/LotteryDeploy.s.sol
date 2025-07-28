@@ -5,21 +5,22 @@ import {Script, console} from "forge-std/Script.sol";
 
 import {Lottery} from "src/Lottery.sol";
 
+import {VRFConsumerConfig} from "src/libraries/Configs.sol";
+
 /**
  * @dev Script to deploy lottery contract.
  *
- * If you are running locally, do not forget do deploy mocks before
- * executing this script.
- *
- * Note: ensure that your VRF consumer config is correctly set up at first.
+ * Note: Your VRF consumer config should be correctly set up
+ * before executing this script. If you are running locally,
+ * make sure that you have deployed mocks and funded a subscription by this time.
  */
 contract LotteryDeployScript is Script {
     function run() external {
-        address guideDaoToken = vm.parseAddress(
+        address guideDAOToken = vm.parseAddress(
             vm.prompt("Enter GuideDAO token address")
         );
 
-        run(guideDaoToken);
+        run(guideDAOToken);
     }
 
     function run(address guideDaoToken) public {
