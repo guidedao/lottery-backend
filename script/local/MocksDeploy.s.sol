@@ -10,8 +10,12 @@ import {GuideDAOTokenMock} from "test/mocks/GuideDAOTokenMock.sol";
 import {VRFCoordinatorMockConfig} from "src/libraries/Configs.sol";
 
 /**
- * @dev Script to deploy GuideDAO token and VRF coordinator mocks
- * for local testing.
+ * @dev Only for local testing.
+ *
+ * Script to deploy GuideDAO token and VRF coordinator mocks.
+ *
+ * Note: this script requires a valid mock VRF config, which is set initially.
+ * However, you can change some values if there is a need for it.
  */
 contract MocksDeployScript is Script {
     function run() external {
@@ -25,18 +29,14 @@ contract MocksDeployScript is Script {
 
         GuideDAOTokenMock tokenMock = new GuideDAOTokenMock();
 
-        uint256 subscriptionId = vrfCoordinatorMock.createSubscription();
-        vrfCoordinatorMock.fundSubscription(
-            subscriptionId,
-            1000000000000000000
-        );
+        vrfCoordinatorMock.createSubscription();
+
         vm.stopBroadcast();
 
         console.log(
             "VRF coordinator mock deployed to: ",
             address(vrfCoordinatorMock)
         );
-        console.log("Subscription Id: ", subscriptionId);
         console.log("GuideDAO token mock deployed to: ", address(tokenMock));
     }
 }

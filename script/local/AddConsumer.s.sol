@@ -5,25 +5,22 @@ import {Script, console} from "forge-std/Script.sol";
 
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
-import {GuideDAOTokenMock} from "test/mocks/GuideDAOTokenMock.sol";
-
 import {VRFConsumerConfig} from "src/libraries/Configs.sol";
 
 /**
- * @dev Script to locally add lottery contract to the consumers list of
+ * @dev Only for local testing.
+ *
+ * Script to add lottery contract to the consumers list of
  * VRF coordinator.
  *
- * Do not forget to deploy mocks and lottery before executing this script.
- *
- * If you are running on production or public testnets, use Chainlink
- * Subscription Manager instead.
- *
- * Note: ensure that your VRF consumer config is correctly set up at first.
+ * Note: your VRF consumer config should be correctly set up
+ * before executing this script. Make sure that you have deployed mocks
+ * along with lottery contract and funded a subscription by this time.
  */
 contract AddConsumerScript is Script {
     function run() external {
         address consumer = vm.parseAddress(
-            vm.prompt("Enter mock lottery address: ")
+            vm.prompt("Enter lottery contract address")
         );
 
         run(consumer);
