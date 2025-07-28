@@ -46,12 +46,12 @@ Now you can properly set VRF consumer config ([details](https://docs.chain.link/
 
 library VRFConsumerConfig  {
 // Both taken from {MocksDeployScript} logs (or
-Chainlink Subscription Manager if not testing locally)
+// Chainlink Subscription Manager if not testing locally)
 address constant VRF_COORDINATOR = <COORDINATOR_ADDRESS>
 uint256 constant SUBSCRIPTION_ID = <SUBSCRIPTION_ID>
 
 // Indicates maximum gas price you are willing to pay,
-use arbitrary bytes32 value if running locally
+// use arbitrary bytes32 value if running locally
 bytes32 constant KEY_HASH = <KEY_HASH>
 // ...
 ```
