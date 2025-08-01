@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 
 import {Lottery} from "src/Lottery.sol";
 
-import {VRFConsumerConfig} from "src/libraries/Configs.sol";
+import {VRFConsumerConfig, LotteryConfig} from "src/libraries/Configs.sol";
 
 /**
  * @dev Script to deploy lottery contract.
@@ -27,13 +27,14 @@ contract LotteryDeployScript is Script {
         vm.startBroadcast();
 
         Lottery lottery = new Lottery(
+            LotteryConfig.ORGANIZER,
+            LotteryConfig.TICKET_PRICE,
             guideDaoToken,
             VRFConsumerConfig.VRF_COORDINATOR,
             VRFConsumerConfig.SUBSCRIPTION_ID,
             VRFConsumerConfig.KEY_HASH,
             VRFConsumerConfig.CALLBACK_GAS_LIMIT,
-            VRFConsumerConfig.REQUEST_CONFIRMATIONS,
-            VRFConsumerConfig.NUM_WORDS
+            VRFConsumerConfig.REQUEST_CONFIRMATIONS
         );
 
         vm.stopBroadcast();
