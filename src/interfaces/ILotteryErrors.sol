@@ -27,14 +27,6 @@ interface ILotteryErrors {
      */
     error ZeroRefundBalance(address caller);
 
-    /**
-     * @notice Unable to refund money as deadline has expired.
-     */
-    error RefundWindowIsClosed(
-        uint256 currentTimestamp,
-        uint256 refundDeadlineTimestamp
-    );
-
     /*
      * @notice Received lottery status does not match expected.
      */
@@ -63,4 +55,14 @@ interface ILotteryErrors {
      * @notice Unable to send money to the `receiver`.
      */
     error WithdrawFailed(address receiver);
+
+    /**
+     * @notice Unable to change organizer address to zero.
+     */
+    error ZeroOrganizerAddress();
+
+    /**
+     * @notice Unable to change ticket price to zero.
+     */
+    error ZeroTicketPrice();
 }
