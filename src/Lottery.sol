@@ -4,7 +4,7 @@ pragma solidity ^0.8.30;
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
-import {ILottery} from "./interfaces/ILoterry.sol";
+import {ILottery} from "./interfaces/ILottery.sol";
 import {ILotteryErrors} from "./interfaces/ILotteryErrors.sol";
 
 import {Types} from "./libraries/Types.sol";
