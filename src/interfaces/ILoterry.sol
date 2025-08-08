@@ -9,14 +9,14 @@ import {Types} from "../libraries/Types.sol";
  */
 interface ILottery {
     /**
-     * @notice New participant has entered the lottery.
+     * @notice `participant` has bought `amount` tickets.
      */
-    event ParticipantRegistered(address indexed participant);
+    event TicketsBought(address indexed participant, uint256 amount);
 
     /**
-     * @notice Participant has unregistered from the lottery.
+     * @notice `participant` returned `amount` of their tickets back.
      */
-    event ParticipantQuitted(address indexed participant);
+    event TicketsReturned(address indexed participant, uint256 amount);
 
     /**
      * @notice Participant has refunded their money as the lottery
@@ -91,25 +91,42 @@ interface ILottery {
     function registrationEndTime() external view returns (uint256);
 
     /**
-     * @notice Enter lottery with corresponding contact information.
-     * @dev Emits {ParticipantRegistered}.
+     * @notice Buy specified amount of lottery tickets.
+     * @dev Emits {TicketsBought}.
      *
      * Requirements:
-     * - Caller has not registered before
+     * - `_amount` is not zero
+     * - User is not a lottery participant yet
+     * - New total number of participants must not exceed the limit
      * - Registration is currently open
-     * - The sent ether is sufficient to buy a ticket
+     * - The sent ether is sufficient to buy given tickets amount
      * */
-    function enter(bytes calldata _encryptedContactDetails) external payable;
+    function enter(
+        uint256 _ticketsAmount,
+        bytes calldata _encryptedContactDetails
+    ) external payable;
 
     /**
-     * @notice Quit the lottery and receive some part of money back.
-     * @dev Emits {ParticipantQuitted}.
+     * @notice Buy specified amount of lottery tickets.
+     * @dev Emits {TicketsBought}.
      *
      * Requirements:
-     * - Caller is a registered lottery participant
+     * - `_amount` is not zero
+     * - User is a lottery participant
+     * - Registration is currently open
+     * - The sent ether is sufficient to buy given tickets amount
+     * */
+    function buyMoreTickets(uint256 _amount) external payable;
+
+    /**
+     * @notice Sold some lottery tickets and receive a part of money back.
+     * @dev Emits {TicketsReturned}.
+     *
+     * Requirements:
+     * - Caller has at least `_amount` tickets
      * - Registration is currently open
      */
-    function quit() external;
+    function returnTickets(uint256 _amount) external;
 
     /**
      * @notice Refund money if the user participated in an invalid lottery.
