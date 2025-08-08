@@ -18,6 +18,17 @@ interface ILotteryErrors {
     error AlreadyRegistered(address participant);
 
     /**
+     * @notice `buyer` requested zero tickets to buy.
+     */
+    error ZeroTicketsToBuy(address buyer);
+
+    /**
+     * @notice New user cannot enter the lottery, since participants
+     * limit has been already reached.
+     */
+    error ParticipantsLimitExceeded(uint limit);
+
+    /**
      * @notice The `caller` is not a lottery participant.
      */
     error HasNotRegistered(address caller);
