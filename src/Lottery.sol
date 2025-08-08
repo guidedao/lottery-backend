@@ -19,7 +19,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
      * to its index in {participants}.
      */
     struct ParticipantInfo {
-        bool isParticipant;
+        uint256 ticketsBought;
         uint256 participantIndex;
         bytes encryptedContactDetails;
     }
@@ -51,7 +51,8 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     }
 
     /* dummy values for now */
-    uint256 public constant TARGET_PARTICIPANTS_NUMBER = 30;
+    uint8 public constant TARGET_PARTICIPANTS_NUMBER = 30;
+    uint16 public constant MAX_PARTICIPANTS_NUMBER = 777;
     uint256 public constant REGISTRATION_DURATION = 21 days;
     uint256 public constant MAX_EXTENSION_TIME = 7 days;
     uint256 public constant REFUND_WINDOW = 14 days;
@@ -217,7 +218,10 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     /**
      * @inheritdoc ILottery
      */
-    function enter(bytes calldata _encryptedContactDetails) external payable {
+    function enter(
+        uint256 _ticketsAmount,
+        bytes calldata _encryptedContactDetails
+    ) external payable {
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.OpenedForRegistration,
@@ -231,12 +235,17 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
             storage actualParticipantsInfo = participantsInfo[lotteryNumber];
 
         require(
-            !actualParticipantsInfo[msg.sender].isParticipant,
+            actualParticipantsInfo[msg.sender].ticketsBought == 0,
             AlreadyRegistered(msg.sender)
         );
 
+        // require(
+        //     _state.participantsCount < MAX_PARTICIPANTS_NUMBER,
+        //     ParticipantsLimitExceeded(MAX_PARTICIPANTS_NUMBER)
+        // );
+
         require(
-            msg.value == ticketPrice,
+            msg.value == ticketPrice * _ticketsAmount,
             InsufficientFunds(msg.sender, msg.value, ticketPrice)
         );
 
@@ -250,16 +259,16 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
         ParticipantInfo storage userInfo = actualParticipantsInfo[msg.sender];
 
         userInfo.encryptedContactDetails = _encryptedContactDetails;
-        userInfo.isParticipant = true;
+        userInfo.ticketsBought = _ticketsAmount;
         userInfo.participantIndex = state.participantsCount++;
 
-        emit ParticipantRegistered(lotteryNumber, msg.sender);
+        emit TicketsBought(lotteryNumber, msg.sender, _ticketsAmount);
     }
 
     /**
      * @inheritdoc ILottery
      */
-    function quit() external {
+    function buyMoreTickets(uint256 _amount) external payable {
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.OpenedForRegistration,
@@ -273,35 +282,68 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
             storage actualParticipantsInfo = participantsInfo[lotteryNumber];
 
         require(
-            actualParticipantsInfo[msg.sender].isParticipant,
+            actualParticipantsInfo[msg.sender].ticketsBought > 0,
+            HasNotRegistered(msg.sender)
+        );
+
+        require(
+            msg.value == ticketPrice * _amount,
+            InsufficientFunds(msg.sender, msg.value, ticketPrice)
+        );
+
+        actualParticipantsInfo[msg.sender].ticketsBought += _amount;
+
+        emit TicketsBought(lotteryNumber, msg.sender, _amount);
+    }
+
+    /**
+     * @inheritdoc ILottery
+     */
+    function returnTickets(uint256 _amount) external {
+        Types.LotteryStatus currentStatus = _status();
+        require(
+            currentStatus == Types.LotteryStatus.OpenedForRegistration,
+            IncorrectLotteryStatus(
+                currentStatus,
+                Types.LotteryStatus.OpenedForRegistration
+            )
+        );
+
+        mapping(address participant => ParticipantInfo)
+            storage actualParticipantsInfo = participantsInfo[lotteryNumber];
+
+        require(
+            actualParticipantsInfo[msg.sender].ticketsBought >= _amount,
             HasNotRegistered(msg.sender)
         );
 
         uint256 participantIndex = actualParticipantsInfo[msg.sender]
             .participantIndex;
 
-        delete actualParticipantsInfo[msg.sender];
+        actualParticipantsInfo[msg.sender].ticketsBought -= _amount;
 
-        LotteryState storage state = _state;
+        if (actualParticipantsInfo[msg.sender].ticketsBought == 0) {
+            LotteryState storage state = _state;
 
-        mapping(uint index => address)
-            storage actualParticipants = participants[lotteryNumber];
+            mapping(uint index => address)
+                storage actualParticipants = participants[lotteryNumber];
 
-        if (participantIndex != state.participantsCount - 1) {
-            actualParticipants[participantIndex] = actualParticipants[
-                state.participantsCount - 1
-            ];
+            if (participantIndex != state.participantsCount - 1) {
+                actualParticipants[participantIndex] = actualParticipants[
+                    state.participantsCount - 1
+                ];
 
-            address movedParticipant = actualParticipants[participantIndex];
-            actualParticipantsInfo[movedParticipant]
-                .participantIndex = participantIndex;
+                address movedParticipant = actualParticipants[participantIndex];
+                actualParticipantsInfo[movedParticipant]
+                    .participantIndex = participantIndex;
+            }
+
+            delete actualParticipants[--state.participantsCount];
         }
 
-        delete actualParticipants[--state.participantsCount];
+        emit TicketsReturned(lotteryNumber, msg.sender, _amount);
 
-        emit ParticipantQuitted(lotteryNumber, msg.sender);
-
-        (bool success, ) = msg.sender.call{value: ticketPrice}("");
+        (bool success, ) = msg.sender.call{value: ticketPrice * _amount}("");
 
         require(success, WithdrawFailed(msg.sender));
     }
