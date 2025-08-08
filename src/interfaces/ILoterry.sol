@@ -11,39 +11,51 @@ interface ILottery {
     /**
      * @notice `participant` has bought `amount` tickets.
      */
-    event TicketsBought(address indexed participant, uint256 amount);
+    event TicketsBought(
+        uint256 lotteryNumber,
+        address indexed participant,
+        uint256 amount
+    );
 
     /**
      * @notice `participant` returned `amount` of their tickets back.
      */
-    event TicketsReturned(address indexed participant, uint256 amount);
+    event TicketsReturned(
+        uint256 lotteryNumber,
+        address indexed participant,
+        uint256 amount
+    );
 
     /**
      * @notice Participant has refunded their money as the lottery
      * has been declared invalid and closed.
      */
-    event MoneyRefunded(address indexed participant);
+    event MoneyRefunded(address indexed participant, uint256 amount);
 
     /**
      * @notice Lottery has started and is opened for registrations.
      */
-    event LotteryStarted(uint256 startTimestamp);
+    event LotteryStarted(uint256 lotteryNumber, uint256 startTime);
 
     /**
      * @notice Registration time has been prolongated by `duration` seconds.
      */
-    event RegistrationTimeExtended(uint256 duration);
+    event RegistrationTimeExtended(uint256 lotteryNumber, uint256 duration);
 
     /**
      * @notice Lottery has been closed as invalid.
      */
-    event InvalidLotteryClosed(uint256 closeTimestamp);
+    event InvalidLotteryClosed(uint256 lotteryNumber, uint256 closeTime);
 
     /**
      * @notice The next winner reveal is pending.
      * @dev Chainlink VRF {requestRandomWords} has been called.
      */
-    event WinnerRequested(uint256 requestId, uint256 requestTimestamp);
+    event WinnerRequested(
+        uint256 lotteryNumber,
+        uint256 requestId,
+        uint256 requestTime
+    );
 
     /**
      * @notice Lottery has ended with given winner address.
@@ -51,7 +63,11 @@ interface ILottery {
      * in this interface. This event is only emitted in oracle
      * callback {fulfillRandomWords}.
      */
-    event WinnerRevealed(address indexed winner, uint revealTimestamp);
+    event WinnerRevealed(
+        uint256 lotteryNumber,
+        address indexed winner,
+        uint revealTime
+    );
 
     /**
      * @notice `amount` wei has been withdrawn to organizer address
@@ -60,10 +76,25 @@ interface ILottery {
     event OrganizerFundsWithdrawn(uint256 amount);
 
     /**
-     * The `participant`'s refund deadline has expired, and organizer
+     * Refund batch deadlines has expired, and organizer
      * collected that money.
      */
-    event ExpiredRefundCollected(address indexed participant);
+    event ExpiredRefundsCollected(uint256 batchId);
+
+    /**
+     * @notice Ticket price has been changed from old to new value.
+     */
+    event TicketPriceChanged(uint256 from, uint256 to);
+
+    /**
+     * @notice Organizer has been changed from old to new value.
+     */
+    event OrganizerChanged(address from, address to);
+
+    /**
+     * @notice Returns maximum patricipants number, which is constant.
+     */
+    function MAX_PARTICIPANTS_NUMBER() external pure returns (uint16);
 
     /**
      * @notice Returns ticket (entrance) price.
@@ -91,8 +122,13 @@ interface ILottery {
     function registrationEndTime() external view returns (uint256);
 
     /**
-     * @notice Buy specified amount of lottery tickets.
-     * @dev Emits {TicketsBought}.
+     * @notice Returns current refund balance of the given user.
+     */
+    function refundAmount(address _user) external view returns (uint256);
+
+    /**
+     * @notice Enter lottery with corresponding contact information.
+     * @dev Emits {ParticipantRegistered}.
      *
      * Requirements:
      * - `_amount` is not zero
@@ -129,14 +165,14 @@ interface ILottery {
     function returnTickets(uint256 _amount) external;
 
     /**
-     * @notice Refund money if the user participated in an invalid lottery.
+     * @notice Refund all the avialable money if the user
+     * participated in an invalid lottery.
      * @dev Money can be refunded after the lottery has been closed as invalid.
      *
      * Emits {MoneyRefunded} event.
      *
      * Requirements:
-     * - Caller refund balance is more than zero
-     * - Refund window is not closed
+     * - Caller unexpired refund balance is more than zero
      */
     function refund() external;
 
@@ -154,7 +190,7 @@ interface ILottery {
     function start() external;
 
     /**
-     * @notice Extends registration time by given duration.
+     * @notice Extend registration time by given duration.
      * @dev Emits {RegistationTimeExtended}.
      *
      * Requirements:
@@ -205,12 +241,32 @@ interface ILottery {
     function withdrawOrganizerFunds() external;
 
     /**
-     * @notice Withdraw all refund money with expired deadlines.
-     * @dev Emits a number of {ExpiredRefundCollected} events.
+     * @notice Withdraw all refund money with expired deadlines from
+     * one particular batch (i.e. from single invalid lottery).
+     * @dev Emits {ExpiredRefundsCollected} event.
      *
      * Requirements:
      * - Caller has permission to withdraw money
      * - There is more than zero expired refunds
      */
-    function collectExpiredRefunds() external;
+    function collectExpiredRefunds(uint256 _batchId) external;
+
+    /**
+     * @notice Change current organizer.
+     * @dev Emits {OrganizerChanged} event.
+     *
+     * Requirements:
+     * - Caller has permissions to change organizer
+     */
+    function setOrganizer(address _newOrganizer) external;
+
+    /**
+     * @notice Change current ticket price.
+     * @dev Emits {TicketPriceChanged} event.
+     *
+     * Requirements:
+     * - Caller has permissions to change ticket price
+     * - Lottery is closed at the moment
+     */
+    function setTicketPrice(uint256 _newTicketPrice) external;
 }
