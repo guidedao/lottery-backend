@@ -26,6 +26,7 @@ contract GuideDAOTokenMock is IERC721Metadata, Pausable {
     uint256 public currentIdToMint = 1;
     uint256 public MAX_GRADE = 2;
     mapping(address => bool) public admins;
+    mapping(address => bool) public whiteList;
 
     error TokenDoesNotExist(uint256 tokenId);
     error NotAnAdminOrOwner(address sender);
@@ -74,6 +75,13 @@ contract GuideDAOTokenMock is IERC721Metadata, Pausable {
         bool _isAdmin
     ) external whenNotPaused isAdmin {
         admins[admin] = _isAdmin;
+    }
+
+    function setIsInWhiteList(
+        address student,
+        bool isInWhiteList
+    ) public whenNotPaused isAdmin isFirstToken(student) {
+        whiteList[student] = isInWhiteList;
     }
 
     function mintTo(address to) public whenNotPaused isAdmin {

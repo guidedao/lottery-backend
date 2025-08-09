@@ -27,15 +27,14 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     /**
      * @notice Common information about all the refunds after
      * particular invalid lottery.
-     * @dev Important to notice that `unclaimedRefundsNumber` decrements
+     * @dev Important to notice that `totalUnclaimedFunds` decreases
      * after every user refund, so if whole refund batch expired,
-     * organizer can simply withdraw `unclaimedRefundsNumber` * `ticketPrice` (which
-     * can be different across batches!) wei.
+     * organizer can simply withdraw `totalUnclaimedFunds`.
      */
     struct RefundBatch {
         uint256 refundAssignmentTime;
-        uint256 ticketPrice;
-        uint256 unclaimedRefundsNumber;
+        uint256 totalUnclaimedFunds;
+        mapping(address participant => uint256) refundBalances;
     }
 
     /**
@@ -48,11 +47,12 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
         bool wasStarted;
         bool waitingForOracleResponse;
         uint256 participantsCount;
+        uint256 totalTicketsCount;
     }
 
     /* dummy values for now */
     uint8 public constant TARGET_PARTICIPANTS_NUMBER = 30;
-    uint16 public constant MAX_PARTICIPANTS_NUMBER = 777;
+    uint16 public constant MAX_PARTICIPANTS_NUMBER = 300;
     uint256 public constant REGISTRATION_DURATION = 21 days;
     uint256 public constant MAX_EXTENSION_TIME = 7 days;
     uint256 public constant REFUND_WINDOW = 14 days;
@@ -208,7 +208,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
             RefundBatch storage batch = refundBatches[batchId];
 
             if (block.timestamp <= batch.refundAssignmentTime + REFUND_WINDOW) {
-                totalRefundAmount += batch.ticketPrice;
+                totalRefundAmount += batch.refundBalances[_user];
             }
         }
 
@@ -239,10 +239,12 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
             AlreadyRegistered(msg.sender)
         );
 
-        // require(
-        //     _state.participantsCount < MAX_PARTICIPANTS_NUMBER,
-        //     ParticipantsLimitExceeded(MAX_PARTICIPANTS_NUMBER)
-        // );
+        require(
+            _state.participantsCount < MAX_PARTICIPANTS_NUMBER,
+            ParticipantsLimitExceeded(MAX_PARTICIPANTS_NUMBER)
+        );
+
+        require(_ticketsAmount > 0, ZeroTicketsRequested(msg.sender));
 
         require(
             msg.value == ticketPrice * _ticketsAmount,
@@ -261,6 +263,8 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
         userInfo.encryptedContactDetails = _encryptedContactDetails;
         userInfo.ticketsBought = _ticketsAmount;
         userInfo.participantIndex = state.participantsCount++;
+
+        state.totalTicketsCount += _ticketsAmount;
 
         emit TicketsBought(lotteryNumber, msg.sender, _ticketsAmount);
     }
@@ -286,12 +290,16 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
             HasNotRegistered(msg.sender)
         );
 
+        require(_amount > 0, ZeroTicketsRequested(msg.sender));
+
         require(
             msg.value == ticketPrice * _amount,
             InsufficientFunds(msg.sender, msg.value, ticketPrice)
         );
 
         actualParticipantsInfo[msg.sender].ticketsBought += _amount;
+
+        _state.totalTicketsCount += _amount;
 
         emit TicketsBought(lotteryNumber, msg.sender, _amount);
     }
@@ -312,18 +320,26 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
         mapping(address participant => ParticipantInfo)
             storage actualParticipantsInfo = participantsInfo[lotteryNumber];
 
+        require(_amount > 0, ZeroTicketsRequested(msg.sender));
+
         require(
             actualParticipantsInfo[msg.sender].ticketsBought >= _amount,
-            HasNotRegistered(msg.sender)
+            InsufficientTicketsNumber(
+                msg.sender,
+                actualParticipantsInfo[msg.sender].ticketsBought,
+                _amount
+            )
         );
 
-        uint256 participantIndex = actualParticipantsInfo[msg.sender]
-            .participantIndex;
+        LotteryState storage state = _state;
 
         actualParticipantsInfo[msg.sender].ticketsBought -= _amount;
 
+        _state.totalTicketsCount -= _amount;
+
         if (actualParticipantsInfo[msg.sender].ticketsBought == 0) {
-            LotteryState storage state = _state;
+            uint256 participantIndex = actualParticipantsInfo[msg.sender]
+                .participantIndex;
 
             mapping(uint index => address)
                 storage actualParticipants = participants[lotteryNumber];
@@ -361,8 +377,13 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
             RefundBatch storage batch = refundBatches[batchId];
 
             if (block.timestamp <= batch.refundAssignmentTime + REFUND_WINDOW) {
-                totalRefundAmount += batch.ticketPrice;
-                batch.unclaimedRefundsNumber--;
+                uint256 userBatchRefundBalance = batch.refundBalances[
+                    msg.sender
+                ];
+
+                batch.refundBalances[msg.sender] = 0;
+                totalRefundAmount += userBatchRefundBalance;
+                batch.totalUnclaimedFunds -= userBatchRefundBalance;
             }
         }
 
@@ -438,14 +459,20 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
 
         uint256 currentBatchId = nextRefundBatchId++;
 
-        refundBatches[currentBatchId] = RefundBatch({
-            refundAssignmentTime: block.timestamp,
-            unclaimedRefundsNumber: _state.participantsCount,
-            ticketPrice: ticketPrice
-        });
+        RefundBatch storage batch = refundBatches[currentBatchId];
+
+        batch.refundAssignmentTime = block.timestamp;
 
         for (uint256 i = 0; i < _state.participantsCount; i++) {
             address participant = participants[lotteryNumber][i];
+
+            uint256 userRefundBalance = participantsInfo[lotteryNumber][
+                participant
+            ].ticketsBought * ticketPrice;
+
+            batch.refundBalances[participant] += userRefundBalance;
+            batch.totalUnclaimedFunds += userRefundBalance;
+
             refundBatchIds[participant].push(currentBatchId);
         }
 
@@ -467,6 +494,8 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
             )
         );
 
+        _state.waitingForOracleResponse = true;
+
         uint256 requestId = s_vrfCoordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
                 keyHash: KEY_HASH,
@@ -479,8 +508,6 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
                 )
             })
         );
-
-        _state.waitingForOracleResponse = true;
 
         emit WinnerRequested(lotteryNumber, requestId, block.timestamp);
     }
@@ -510,20 +537,19 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     ) external /* access modifier */ {
         RefundBatch storage batch = refundBatches[_batchId];
 
+        uint256 totalUnclaimedFunds = batch.totalUnclaimedFunds;
+
         require(
             batch.refundAssignmentTime + REFUND_WINDOW < block.timestamp &&
-                batch.unclaimedRefundsNumber > 0,
+                totalUnclaimedFunds > 0,
             NoExpiredRefunds()
         );
 
-        uint256 totalRefundAmount = batch.unclaimedRefundsNumber *
-            batch.ticketPrice;
-
-        batch.unclaimedRefundsNumber = 0;
+        batch.totalUnclaimedFunds = 0;
 
         emit ExpiredRefundsCollected(_batchId);
 
-        (bool success, ) = _organizer.call{value: totalRefundAmount}("");
+        (bool success, ) = _organizer.call{value: totalUnclaimedFunds}("");
 
         require(success, WithdrawFailed(_organizer));
     }
@@ -614,6 +640,10 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
         ticketPrice = _newTicketPrice;
     }
 
+    function f(uint256 requestId, uint256[] calldata randomWords) external {
+        fulfillRandomWords(requestId, randomWords);
+    }
+
     /**
      * @dev Callback to receive random words from
      * Chainlink oracle.
@@ -622,14 +652,25 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
         uint256 /* requestId */,
         uint256[] calldata randomWords
     ) internal virtual override {
-        uint256 winnerIndex = randomWords[0] % _state.participantsCount;
-        address winner = participants[lotteryNumber][winnerIndex];
+        uint256 winnerTicketId = (randomWords[0] % _state.totalTicketsCount) +
+            1;
+        address winner = _findWinnerFromUsers(winnerTicketId);
 
         lastWinner = winner;
 
         organizerFunds += _state.participantsCount * ticketPrice;
 
         delete _state;
+
+        (bool success, ) = GUIDE_DAO_TOKEN.call(
+            abi.encodeWithSignature(
+                "setIsInWhiteList(address,bool)",
+                winner,
+                true
+            )
+        );
+
+        require(success, CallFailed(GUIDE_DAO_TOKEN));
 
         emit WinnerRevealed(lotteryNumber, winner, block.timestamp);
     }
@@ -639,9 +680,13 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
      *
      *                  Lottery was started?
      *                 / (Yes)         (No) \
-     *   Registration time has expired?   Closed
+     *   Registration time has expired     Closed
+     *        or there is maximum
+     *      participants number already?
      *        / (Yes)         (No) \
-     *   Enough participants?   OpenedForRegistration
+     *   If registration time     OpenedForRegistration
+     *      has expired, is
+     *  participants number enough?
      *       / (Yes)   (No) \
      *      Waiting for    Invalid
      *    oracle response?
@@ -650,8 +695,10 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
      */
     function _status() private view returns (Types.LotteryStatus) {
         if (!_state.wasStarted) return Types.LotteryStatus.Closed;
-        if (block.timestamp < _state.registrationEndTime)
-            return Types.LotteryStatus.OpenedForRegistration;
+        if (
+            block.timestamp < _state.registrationEndTime &&
+            _state.participantsCount < MAX_PARTICIPANTS_NUMBER
+        ) return Types.LotteryStatus.OpenedForRegistration;
         if (_state.participantsCount < TARGET_PARTICIPANTS_NUMBER)
             return Types.LotteryStatus.Invalid;
         if (_state.waitingForOracleResponse) {
@@ -659,5 +706,28 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
         } else {
             return Types.LotteryStatus.RegistrationEnded;
         }
+    }
+
+    /**
+     * @notice Function to find winner address from winner ticket id.
+     * @dev Returns organizer address, if total tickets amount is less than
+     * winnter ticket id, which should really never happen.
+     */
+    function _findWinnerFromUsers(
+        uint256 _winnerTicketId
+    ) internal view returns (address) {
+        uint256 cumulativeTickets = 0;
+
+        for (uint256 i = 0; i < _state.participantsCount; i++) {
+            address participant = participants[lotteryNumber][i];
+            cumulativeTickets += participantsInfo[lotteryNumber][participant]
+                .ticketsBought;
+
+            if (_winnerTicketId <= cumulativeTickets) {
+                return participant;
+            }
+        }
+
+        return _organizer;
     }
 }
