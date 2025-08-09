@@ -27,10 +27,14 @@ interface ILottery {
     );
 
     /**
-     * @notice Participant has refunded their money as the lottery
-     * has been declared invalid and closed.
+     * @notice Participant has refunded their money from some refund batch
+     * as the corresponding lottery has been declared invalid and closed.
      */
-    event MoneyRefunded(address indexed participant, uint256 amount);
+    event MoneyRefunded(
+        address indexed participant,
+        uint256 amount,
+        uint256 batchId
+    );
 
     /**
      * @notice Lottery has started and is opened for registrations.
@@ -77,9 +81,9 @@ interface ILottery {
 
     /**
      * Refund batch deadlines has expired, and organizer
-     * collected that money.
+     * collected that money (`amount` wei).
      */
-    event ExpiredRefundsCollected(uint256 batchId);
+    event ExpiredRefundsCollected(uint256 batchId, uint256 amount);
 
     /**
      * @notice Ticket price has been changed from old to new value.
@@ -136,7 +140,7 @@ interface ILottery {
      * - New total number of participants must not exceed the limit
      * - Registration is currently open
      * - The sent ether is sufficient to buy given tickets amount
-     * */
+     */
     function enter(
         uint256 _ticketsAmount,
         bytes calldata _encryptedContactDetails
@@ -151,7 +155,7 @@ interface ILottery {
      * - User is a lottery participant
      * - Registration is currently open
      * - The sent ether is sufficient to buy given tickets amount
-     * */
+     */
     function buyMoreTickets(uint256 _amount) external payable;
 
     /**
