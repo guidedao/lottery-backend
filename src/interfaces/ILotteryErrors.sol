@@ -18,9 +18,9 @@ interface ILotteryErrors {
     error AlreadyRegistered(address participant);
 
     /**
-     * @notice `buyer` requested zero tickets to buy.
+     * @notice `buyer` requested zero tickets to buy or return.
      */
-    error ZeroTicketsToBuy(address buyer);
+    error ZeroTicketsRequested(address caller);
 
     /**
      * @notice New user cannot enter the lottery, since participants
@@ -29,22 +29,23 @@ interface ILotteryErrors {
     error ParticipantsLimitExceeded(uint limit);
 
     /**
-     * @notice The `caller` is not a lottery participant.
+     * @notice The `caller` has not entered the lottery before.
      */
     error HasNotRegistered(address caller);
+
+    /**
+     * @notice The `caller` tried to return more tickets than they have.
+     */
+    error InsufficientTicketsNumber(
+        address caller,
+        uint256 has,
+        uint256 requested
+    );
 
     /**
      * @notice The `caller` has zero refund balance.
      */
     error ZeroRefundBalance(address caller);
-
-    /**
-     * @notice Unable to refund money as deadline has expired.
-     */
-    error RefundWindowIsClosed(
-        uint256 currentTimestamp,
-        uint256 refundDeadlineTimestamp
-    );
 
     /*
      * @notice Received lottery status does not match expected.
@@ -74,4 +75,19 @@ interface ILotteryErrors {
      * @notice Unable to send money to the `receiver`.
      */
     error WithdrawFailed(address receiver);
+
+    /**
+     * @notice Unable to call some function at the `receiver` contract.
+     */
+    error CallFailed(address callable);
+
+    /**
+     * @notice Unable to change organizer address to zero.
+     */
+    error ZeroOrganizerAddress();
+
+    /**
+     * @notice Unable to change ticket price to zero.
+     */
+    error ZeroTicketPrice();
 }
