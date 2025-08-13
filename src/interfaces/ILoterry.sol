@@ -12,7 +12,7 @@ interface ILottery {
      * @notice `participant` has bought `amount` tickets.
      */
     event TicketsBought(
-        uint256 lotteryNumber,
+        uint256 indexed lotteryNumber,
         address indexed participant,
         uint256 amount
     );
@@ -21,39 +21,45 @@ interface ILottery {
      * @notice `participant` returned `amount` of their tickets back.
      */
     event TicketsReturned(
-        uint256 lotteryNumber,
+        uint256 indexed lotteryNumber,
         address indexed participant,
         uint256 amount
     );
 
     /**
-     * @notice Participant has refunded their money from some
-     * lottery (or lotteries) has been declared invalid and closed.
+     * @notice Participant has refunded their money as the lottery
+     * has been declared invalid and closed.
      */
     event MoneyRefunded(address indexed participant, uint256 amount);
 
     /**
      * @notice Lottery has started and is opened for registrations.
      */
-    event LotteryStarted(uint256 lotteryNumber, uint256 startTime);
+    event LotteryStarted(uint256 indexed lotteryNumber, uint256 startTime);
 
     /**
      * @notice Registration time has been prolongated by `duration` seconds.
      */
-    event RegistrationTimeExtended(uint256 lotteryNumber, uint256 duration);
+    event RegistrationTimeExtended(
+        uint256 indexed lotteryNumber,
+        uint256 duration
+    );
 
     /**
      * @notice Lottery has been closed as invalid.
      */
-    event InvalidLotteryClosed(uint256 lotteryNumber, uint256 closeTime);
+    event InvalidLotteryClosed(
+        uint256 indexed lotteryNumber,
+        uint256 closeTime
+    );
 
     /**
      * @notice The next winner reveal is pending.
      * @dev Chainlink VRF {requestRandomWords} has been called.
      */
     event WinnerRequested(
-        uint256 lotteryNumber,
-        uint256 requestId,
+        uint256 indexed lotteryNumber,
+        uint256 indexed requestId,
         uint256 requestTime
     );
 
@@ -64,7 +70,7 @@ interface ILottery {
      * callback {fulfillRandomWords}.
      */
     event WinnerRevealed(
-        uint256 lotteryNumber,
+        uint256 indexed lotteryNumber,
         address indexed winner,
         uint revealTime
     );
@@ -79,7 +85,7 @@ interface ILottery {
      * Refund batch deadlines has expired, and organizer
      * collected that money (`amount` wei).
      */
-    event ExpiredRefundsCollected(uint256 batchId, uint256 amount);
+    event ExpiredRefundsCollected(uint256 indexed batchId, uint256 amount);
 
     /**
      * @notice Ticket price has been changed from old to new value.
@@ -89,7 +95,7 @@ interface ILottery {
     /**
      * @notice Organizer has been changed from old to new value.
      */
-    event OrganizerChanged(address from, address to);
+    event OrganizerChanged(address indexed from, address indexed to);
 
     /**
      * @notice Returns maximum patricipants number, which is constant.
