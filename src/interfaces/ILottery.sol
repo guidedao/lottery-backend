@@ -27,14 +27,10 @@ interface ILottery {
     );
 
     /**
-     * @notice Participant has refunded their money from some refund batch
-     * as the corresponding lottery has been declared invalid and closed.
+     * @notice Participant has refunded their money from some
+     * lottery (or lotteries) has been declared invalid and closed.
      */
-    event MoneyRefunded(
-        address indexed participant,
-        uint256 amount,
-        uint256 batchId
-    );
+    event MoneyRefunded(address indexed participant, uint256 amount);
 
     /**
      * @notice Lottery has started and is opened for registrations.

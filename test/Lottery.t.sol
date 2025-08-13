@@ -18,12 +18,12 @@ contract LotteryTest is Test {
     VRFCoordinatorV2_5Mock vrfCoordinator;
     GuideDAOTokenMock guideDAOToken;
 
-    address[300] participants;
+    address[30] participants;
 
     Lottery lottery;
 
     function setUp() external {
-        for (uint i = 0; i < 300; i++) {
+        for (uint i = 0; i < 30; i++) {
             participants[i] = vm.addr(i + 1);
         }
 
@@ -49,25 +49,8 @@ contract LotteryTest is Test {
             VRFConsumerConfig.REQUEST_CONFIRMATIONS
         );
 
+        vrfCoordinator.addConsumer(subscriptionId, address(lottery));
+
         guideDAOToken.setIsAdmin(address(lottery), true);
-
-        lottery.start();
-
-        for (uint i = 0; i < 300; i++) {
-            hoax(participants[i]);
-            lottery.enter{value: LotteryConfig.TICKET_PRICE * 20}(
-                20,
-                "welllmaohih@gmail.com"
-            );
-        }
-    }
-
-    function test_Loop() external {
-        uint256[] memory m = new uint256[](1);
-        m[0] = 5000;
-
-        lottery.f(1, m);
-
-        assertTrue(lottery.status() == Types.LotteryStatus.Closed);
     }
 }

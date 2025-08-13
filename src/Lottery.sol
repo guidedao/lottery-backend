@@ -547,7 +547,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
 
         batch.totalUnclaimedFunds = 0;
 
-        emit ExpiredRefundsCollected(_batchId);
+        emit ExpiredRefundsCollected(_batchId, totalUnclaimedFunds);
 
         (bool success, ) = _organizer.call{value: totalUnclaimedFunds}("");
 
