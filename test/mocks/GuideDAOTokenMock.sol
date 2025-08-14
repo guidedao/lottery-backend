@@ -37,6 +37,7 @@ contract GuideDAOTokenMock is IERC721Metadata, Pausable {
     error SendingToContract(address recipient);
     error NotTokenOwner(address from, uint256 tokenId);
     error AlreadyTokenOwner(address to, uint256 tokenId);
+    error NotInWhiteList(address student);
 
     modifier isMinted(uint256 tokenId) {
         if (_owners[tokenId] == address(0)) {
@@ -82,6 +83,14 @@ contract GuideDAOTokenMock is IERC721Metadata, Pausable {
         bool isInWhiteList
     ) public whenNotPaused isAdmin isFirstToken(student) {
         whiteList[student] = isInWhiteList;
+    }
+
+    function mint() public whenNotPaused {
+        if (!whiteList[msg.sender]) {
+            revert NotInWhiteList(msg.sender);
+        }
+        whiteList[msg.sender] = false;
+        _mintTo(msg.sender);
     }
 
     function mintTo(address to) public whenNotPaused isAdmin {
