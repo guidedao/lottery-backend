@@ -51,8 +51,8 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     }
 
     /* dummy values for now */
-    uint8 public constant TARGET_PARTICIPANTS_NUMBER = 30;
-    uint16 public constant MAX_PARTICIPANTS_NUMBER = 300;
+    uint8 public constant TARGET_PARTICIPANTS_NUMBER = 1;
+    uint16 public constant MAX_PARTICIPANTS_NUMBER = 200;
     uint256 public constant REGISTRATION_DURATION = 21 days;
     uint256 public constant MAX_EXTENSION_TIME = 7 days;
     uint256 public constant REFUND_WINDOW = 14 days;

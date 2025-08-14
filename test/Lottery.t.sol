@@ -18,12 +18,12 @@ contract LotteryTest is Test {
     VRFCoordinatorV2_5Mock vrfCoordinator;
     GuideDAOTokenMock guideDAOToken;
 
-    address[30] participants;
+    address[200] participants;
 
     Lottery lottery;
 
     function setUp() external {
-        for (uint i = 0; i < 30; i++) {
+        for (uint i = 0; i < 200; i++) {
             participants[i] = vm.addr(i + 1);
         }
 
