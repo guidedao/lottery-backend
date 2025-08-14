@@ -18,9 +18,14 @@ interface ILotteryErrors {
     error AlreadyRegistered(address participant);
 
     /**
-     * @notice `buyer` requested zero tickets to buy or return.
+     * @notice `caller` requested zero tickets to buy or return.
      */
     error ZeroTicketsRequested(address caller);
+
+    /**
+     * @notice `caller` already has GuideDAO NFT.
+     */
+    error AlreadyHasToken(address caller);
 
     /**
      * @notice New user cannot enter the lottery, since participants

@@ -38,5 +38,16 @@ library VRFConsumerConfig {
         0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
     uint32 constant CALLBACK_GAS_LIMIT = 1000000;
     uint16 constant REQUEST_CONFIRMATIONS = 3;
-    uint32 constant NUM_WORDS = 1;
+}
+
+/**
+ * @dev Initial lottery configuration for deployment.
+ *
+ * If you are running locally, `ORGANIZER` (account that can collect
+ * earned funds from lottery and expired refunds) can be directly set
+ * to your address just for the sake of convenience.
+ */
+library LotteryConfig {
+    address constant ORGANIZER = 0x000000000000000000000000000000000000dEaD;
+    uint256 constant TICKET_PRICE = 0.03 ether;
 }
