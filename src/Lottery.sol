@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
+import {IGuideDAOToken} from "./interfaces/IGuideDAOToken.sol";
 import {ILottery} from "./interfaces/ILottery.sol";
 import {ILotteryErrors} from "./interfaces/ILotteryErrors.sol";
 
@@ -51,7 +53,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     }
 
     /* dummy values for now */
-    uint8 public constant TARGET_PARTICIPANTS_NUMBER = 1;
+    uint8 public constant TARGET_PARTICIPANTS_NUMBER = 2;
     uint16 public constant MAX_PARTICIPANTS_NUMBER = 200;
     uint256 public constant REGISTRATION_DURATION = 21 days;
     uint256 public constant MAX_EXTENSION_TIME = 7 days;
@@ -75,7 +77,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     uint32 private immutable CALLBACK_GAS_LIMIT;
     uint16 private immutable REQUEST_CONFIRMATIONS;
 
-    address public immutable GUIDE_DAO_TOKEN;
+    IGuideDAOToken public immutable GUIDE_DAO_TOKEN;
 
     /**
      * @dev Address that can receive money from lotteries and
@@ -174,7 +176,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     ) VRFConsumerBaseV2Plus(_vrfCoordinator) {
         _organizer = organizer;
         ticketPrice = _ticketPrice;
-        GUIDE_DAO_TOKEN = _guideDAOToken;
+        GUIDE_DAO_TOKEN = IGuideDAOToken(_guideDAOToken);
         SUBSCRIPTION_ID = _subscriptionId;
         KEY_HASH = _keyHash;
         CALLBACK_GAS_LIMIT = _callbackGasLimit;
@@ -229,6 +231,11 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
                 currentStatus,
                 Types.LotteryStatus.OpenedForRegistration
             )
+        );
+
+        require(
+            GUIDE_DAO_TOKEN.balanceOf(msg.sender) == 0,
+            AlreadyHasToken(msg.sender)
         );
 
         mapping(address participant => ParticipantInfo)
@@ -664,15 +671,9 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
 
         delete _state;
 
-        (bool success, ) = GUIDE_DAO_TOKEN.call(
-            abi.encodeWithSignature(
-                "setIsInWhiteList(address,bool)",
-                winner,
-                true
-            )
-        );
-
-        require(success, CallFailed(GUIDE_DAO_TOKEN));
+        try GUIDE_DAO_TOKEN.mintTo(winner) {} catch {
+            GUIDE_DAO_TOKEN.mintTo(_organizer);
+        }
 
         emit WinnerRevealed(lotteryNumber, winner, block.timestamp);
     }
@@ -713,7 +714,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     /**
      * @notice Function to find winner address from winner ticket id.
      * @dev Returns organizer address, if total tickets amount is less than
-     * winnter ticket id, which should really never happen.
+     * winner ticket id, which should really never happen.
      */
     function _findWinnerFromUsers(
         uint256 _winnerTicketId
