@@ -616,6 +616,9 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
         );
     }
 
+    /**
+     * @inheritdoc ILottery
+     */
     function setOrganizer(
         address _newOrganizer
     ) external /* access modifier */ {
@@ -625,6 +628,9 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
         _organizer = _newOrganizer;
     }
 
+    /**
+     * @inheritdoc ILottery
+     */
     function setTicketPrice(
         uint256 _newTicketPrice
     ) external /* access modifier */ {
@@ -638,10 +644,6 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
 
         emit TicketPriceChanged(ticketPrice, _newTicketPrice);
         ticketPrice = _newTicketPrice;
-    }
-
-    function f(uint256 requestId, uint256[] calldata randomWords) external {
-        fulfillRandomWords(requestId, randomWords);
     }
 
     /**
@@ -658,7 +660,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
 
         lastWinner = winner;
 
-        organizerFunds += _state.participantsCount * ticketPrice;
+        organizerFunds += _state.totalTicketsCount * ticketPrice;
 
         delete _state;
 
