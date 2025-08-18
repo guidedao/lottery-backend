@@ -65,6 +65,7 @@ contract Lottery is
     uint256 public constant MAX_EXTENSION_TIME = 7 days;
     uint256 public constant REFUND_WINDOW = 14 days;
 
+    /* Role name hashes for AccessControl */
     bytes32 private constant LOTTERY_ORGANIZER_ROLE =
         keccak256(abi.encode("LOTTERY_ORGANIZER_ROLE"));
     bytes32 private constant LOTTERY_OPERATOR_ROLE =
