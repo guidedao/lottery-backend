@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
@@ -14,7 +15,12 @@ import {Types} from "./libraries/Types.sol";
 /**
  * @notice Main lottery contract.
  */
-contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
+contract Lottery is
+    ILottery,
+    ILotteryErrors,
+    VRFConsumerBaseV2Plus,
+    AccessControl
+{
     /**
      * @notice Information about every lottery participant.
      * @dev `participantIndex` helps to map given participant address
@@ -58,6 +64,11 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     uint256 public constant REGISTRATION_DURATION = 21 days;
     uint256 public constant MAX_EXTENSION_TIME = 7 days;
     uint256 public constant REFUND_WINDOW = 14 days;
+
+    bytes32 private constant LOTTERY_ORGANIZER_ROLE =
+        keccak256(abi.encode("LOTTERY_ORGANIZER_ROLE"));
+    bytes32 private constant LOTTERY_OPERATOR_ROLE =
+        keccak256(abi.encode("LOTTERY_OPERATOR_ROLE"));
 
     /**
      * @notice Number of lotteries that must pass after a certain one
@@ -181,6 +192,10 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
         KEY_HASH = _keyHash;
         CALLBACK_GAS_LIMIT = _callbackGasLimit;
         REQUEST_CONFIRMATIONS = _requestConfirmations;
+
+        _setRoleAdmin(LOTTERY_OPERATOR_ROLE, LOTTERY_ORGANIZER_ROLE);
+
+        _grantRole(LOTTERY_ORGANIZER_ROLE, organizer);
     }
 
     /**
@@ -324,10 +339,10 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
             )
         );
 
+        require(_amount > 0, ZeroTicketsRequested(msg.sender));
+
         mapping(address participant => ParticipantInfo)
             storage actualParticipantsInfo = participantsInfo[lotteryNumber];
-
-        require(_amount > 0, ZeroTicketsRequested(msg.sender));
 
         require(
             actualParticipantsInfo[msg.sender].ticketsBought >= _amount,
@@ -408,7 +423,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     /**
      * @inheritdoc ILottery
      */
-    function start() external /* access modifier */ {
+    function start() external onlyRole(LOTTERY_OPERATOR_ROLE) {
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.Closed,
@@ -430,7 +445,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
      */
     function extendRegistrationTime(
         uint256 _duration
-    ) external /* access modifier */ {
+    ) external onlyRole(LOTTERY_OPERATOR_ROLE) {
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.OpenedForRegistration,
@@ -457,7 +472,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     /**
      * @inheritdoc ILottery
      */
-    function closeInvalidLottery() external /* access modifier */ {
+    function closeInvalidLottery() external onlyRole(LOTTERY_OPERATOR_ROLE) {
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.Invalid,
@@ -491,7 +506,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     /**
      * @inheritdoc ILottery
      */
-    function requestWinner() external /* access modifier */ {
+    function requestWinner() external onlyRole(LOTTERY_OPERATOR_ROLE) {
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.RegistrationEnded,
@@ -520,48 +535,6 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     }
 
     /**
-     * @inheritdoc ILottery
-     */
-    function withdrawOrganizerFunds() external /* access modifier */ {
-        uint256 fundsToWithdraw = organizerFunds;
-
-        require(fundsToWithdraw > 0, ZeroOrganizerBalance());
-
-        organizerFunds = 0;
-
-        emit OrganizerFundsWithdrawn(fundsToWithdraw);
-
-        (bool success, ) = _organizer.call{value: fundsToWithdraw}("");
-
-        require(success, WithdrawFailed(_organizer));
-    }
-
-    /**
-     * @inheritdoc ILottery
-     */
-    function collectExpiredRefunds(
-        uint256 _batchId
-    ) external /* access modifier */ {
-        RefundBatch storage batch = refundBatches[_batchId];
-
-        uint256 totalUnclaimedFunds = batch.totalUnclaimedFunds;
-
-        require(
-            batch.refundAssignmentTime + REFUND_WINDOW < block.timestamp &&
-                totalUnclaimedFunds > 0,
-            NoExpiredRefunds()
-        );
-
-        batch.totalUnclaimedFunds = 0;
-
-        emit ExpiredRefundsCollected(_batchId, totalUnclaimedFunds);
-
-        (bool success, ) = _organizer.call{value: totalUnclaimedFunds}("");
-
-        require(success, WithdrawFailed(_organizer));
-    }
-
-    /**
      * @notice Clear data about participants of given lottery,
      * starting from certain index with defined maximum of {MAX_PARTICIPANTS_TO_CLEAR}.
      *
@@ -576,7 +549,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     function clearLotteryData(
         uint256 _lotteryNumberToClear,
         uint256 _fromParticipantIndex
-    ) external /* access modifier */ {
+    ) external onlyRole(LOTTERY_OPERATOR_ROLE) {
         uint256 minimumCurrentLotteryNumber = _lotteryNumberToClear +
             LOTTERY_DATA_FRESHNESS_INTERVAL;
         require(
@@ -626,10 +599,58 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
     /**
      * @inheritdoc ILottery
      */
-    function setOrganizer(
+    function withdrawOrganizerFunds()
+        external
+        onlyRole(LOTTERY_ORGANIZER_ROLE)
+    {
+        uint256 fundsToWithdraw = organizerFunds;
+
+        require(fundsToWithdraw > 0, ZeroOrganizerBalance());
+
+        organizerFunds = 0;
+
+        emit OrganizerFundsWithdrawn(fundsToWithdraw);
+
+        (bool success, ) = _organizer.call{value: fundsToWithdraw}("");
+
+        require(success, WithdrawFailed(_organizer));
+    }
+
+    /**
+     * @inheritdoc ILottery
+     */
+    function collectExpiredRefunds(
+        uint256 _batchId
+    ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
+        RefundBatch storage batch = refundBatches[_batchId];
+
+        uint256 totalUnclaimedFunds = batch.totalUnclaimedFunds;
+
+        require(
+            batch.refundAssignmentTime + REFUND_WINDOW < block.timestamp &&
+                totalUnclaimedFunds > 0,
+            NoExpiredRefunds()
+        );
+
+        batch.totalUnclaimedFunds = 0;
+
+        emit ExpiredRefundsCollected(_batchId, totalUnclaimedFunds);
+
+        (bool success, ) = _organizer.call{value: totalUnclaimedFunds}("");
+
+        require(success, WithdrawFailed(_organizer));
+    }
+
+    /**
+     * @inheritdoc ILottery
+     */
+    function changeOrganizer(
         address _newOrganizer
-    ) external /* access modifier */ {
+    ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
         require(_newOrganizer != address(0), ZeroOrganizerAddress());
+
+        _grantRole(LOTTERY_ORGANIZER_ROLE, _newOrganizer);
+        _revokeRole(LOTTERY_ORGANIZER_ROLE, _organizer);
 
         emit OrganizerChanged(_organizer, _newOrganizer);
         _organizer = _newOrganizer;
@@ -640,7 +661,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus {
      */
     function setTicketPrice(
         uint256 _newTicketPrice
-    ) external /* access modifier */ {
+    ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.Closed,

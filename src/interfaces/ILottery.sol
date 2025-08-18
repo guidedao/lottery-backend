@@ -264,7 +264,7 @@ interface ILottery {
      * Requirements:
      * - Caller has permissions to change organizer
      */
-    function setOrganizer(address _newOrganizer) external;
+    function changeOrganizer(address _newOrganizer) external;
 
     /**
      * @notice Change current ticket price.
