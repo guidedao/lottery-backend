@@ -36,7 +36,7 @@ library VRFConsumerConfig {
     uint256 constant SUBSCRIPTION_ID = 0;
     bytes32 constant KEY_HASH =
         0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
-    uint32 constant CALLBACK_GAS_LIMIT = 1000000;
+    uint32 constant CALLBACK_GAS_LIMIT = 1500000;
     uint16 constant REQUEST_CONFIRMATIONS = 3;
 }
 

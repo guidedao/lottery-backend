@@ -103,6 +103,29 @@ interface ILottery {
     function MAX_PARTICIPANTS_NUMBER() external pure returns (uint16);
 
     /**
+     * @notice Returns number of lottery participants if it is active
+     * or zero otherwise.
+     */
+    function participantsCount() external view returns (uint256);
+
+    /**
+     * @notice Returns true only if the lottery is active and given user
+     * is its participant.
+     */
+    function isActualParticipant(address _user) external view returns (bool);
+
+    /**
+     * @notice Returns encrypted contact details that user has left for the
+     * latest (including current) lottery.
+     *
+     * Requirements:
+     * - User has participated in the latest lottery
+     */
+    function latestContactDetails(
+        address _user
+    ) external view returns (bytes memory);
+
+    /**
      * @notice Returns ticket (entrance) price.
      */
     function ticketPrice() external view returns (uint256);
