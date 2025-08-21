@@ -26,6 +26,7 @@ contract GuideDAOTokenMock is IERC721Metadata, Pausable {
     uint256 public currentIdToMint = 1;
     uint256 public MAX_GRADE = 2;
     mapping(address => bool) public admins;
+    mapping(address => bool) public whiteList;
 
     error TokenDoesNotExist(uint256 tokenId);
     error NotAnAdminOrOwner(address sender);
@@ -36,6 +37,7 @@ contract GuideDAOTokenMock is IERC721Metadata, Pausable {
     error SendingToContract(address recipient);
     error NotTokenOwner(address from, uint256 tokenId);
     error AlreadyTokenOwner(address to, uint256 tokenId);
+    error NotInWhiteList(address student);
 
     modifier isMinted(uint256 tokenId) {
         if (_owners[tokenId] == address(0)) {
@@ -76,8 +78,27 @@ contract GuideDAOTokenMock is IERC721Metadata, Pausable {
         admins[admin] = _isAdmin;
     }
 
+    function setIsInWhiteList(
+        address student,
+        bool isInWhiteList
+    ) public whenNotPaused isAdmin isFirstToken(student) {
+        whiteList[student] = isInWhiteList;
+    }
+
+    function mint() public whenNotPaused {
+        if (!whiteList[msg.sender]) {
+            revert NotInWhiteList(msg.sender);
+        }
+        whiteList[msg.sender] = false;
+        _mintTo(msg.sender);
+    }
+
     function mintTo(address to) public whenNotPaused isAdmin {
         _mintTo(to);
+    }
+
+    function burn(address from) public whenNotPaused {
+        _transferFrom(from, address(0), getAddressNFTId(from));
     }
 
     function safeTransferFrom(
@@ -155,6 +176,10 @@ contract GuideDAOTokenMock is IERC721Metadata, Pausable {
         address owner,
         address operator
     ) external pure override returns (bool) {}
+
+    function getAddressNFTId(address user) public view returns (uint256) {
+        return _ids[user];
+    }
 
     function supportsInterface(
         bytes4 interfaceId

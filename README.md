@@ -46,21 +46,28 @@ You will instantly need the VRF coordinator address to fund a subscription and r
 forge script script/local/FundSubscription.s.sol:FundSubscriptionScript --rpc-url http://localhost:8545 --broadcast --private-key <PRIVATE_KEY>
 ```
 
-Now you can properly set the VRF consumer config ([details](https://docs.chain.link/vrf/v2-5/overview/subscription)) :
+Now you can properly set the VRF consumer config ([details](https://docs.chain.link/vrf/v2-5/overview/subscription)). You can also set ORGANIZER to your address if you want to conveniently work with results of functions, responsible for financial operations (e.g. withdrawOrganizerFunds or collectExpiredRefunds):
 
 ```Solidity
 // src/libraries/Configs.sol
 
 library VRFConsumerConfig  {
-// Both taken from {MocksDeployScript} logs (or
-// Chainlink Subscription Manager if not testing locally)
-address constant VRF_COORDINATOR = <COORDINATOR_ADDRESS>
-uint256 constant SUBSCRIPTION_ID = <SUBSCRIPTION_ID>
+  // Both taken from {MocksDeployScript} logs (or
+  // Chainlink Subscription Manager if not testing locally)
+  address constant VRF_COORDINATOR = <COORDINATOR_ADDRESS>
+  uint256 constant SUBSCRIPTION_ID = <SUBSCRIPTION_ID>
 
-// Indicates maximum gas price you are willing to pay,
-// use arbitrary bytes32 value if running locally
-bytes32 constant KEY_HASH = <KEY_HASH>
-// ...
+  // Indicates maximum gas price you are willing to pay,
+  // use arbitrary bytes32 value if running locally
+  bytes32 constant KEY_HASH = <KEY_HASH>
+  // ...
+}
+//...
+library LotteryConfig {
+  // You can also set this to your address
+  // during local testing if needed
+  address ORGANIZER = <ORGANIZER_ADDRESS>
+}
 ```
 
 Don't forget to save changes.
@@ -83,7 +90,7 @@ Now you have fully prepared local chain, and you can use [http://localhost:8545]
 
 ### Running in production or public testnets
 
-In this case you will only have to set config values (VRF coordinator address, subscription id and key hash), taken from Chainlink Subscription Manager, and deploy the lottery contract in the same way as above.
+In this case you will only have to set config values (VRFConsumer, taken from Chainlink Subscription Manager, and lottery), and deploy the lottery contract in the same way as above.
 
 ## Code Quality
 
