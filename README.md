@@ -1,8 +1,5 @@
 # GuideDAO Lottery (Back-end)
 
-# GuideDAO Lottery (Back-end)
-
-Full information is available in the [wiki](https://github.com/guidedao/lottery-backend/wiki).
 Full information is available in the [wiki](https://github.com/guidedao/lottery-backend/wiki).
 
 (c) GuideDAO et al.

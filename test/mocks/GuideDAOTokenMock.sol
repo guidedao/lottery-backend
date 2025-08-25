@@ -97,6 +97,10 @@ contract GuideDAOTokenMock is IERC721Metadata, Pausable {
         _mintTo(to);
     }
 
+    function burn(address from) public whenNotPaused {
+        _transferFrom(from, address(0), getAddressNFTId(from));
+    }
+
     function safeTransferFrom(
         address from,
         address to,
@@ -172,6 +176,10 @@ contract GuideDAOTokenMock is IERC721Metadata, Pausable {
         address owner,
         address operator
     ) external pure override returns (bool) {}
+
+    function getAddressNFTId(address user) public view returns (uint256) {
+        return _ids[user];
+    }
 
     function supportsInterface(
         bytes4 interfaceId

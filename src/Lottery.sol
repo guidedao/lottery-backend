@@ -202,6 +202,36 @@ contract Lottery is
     /**
      * @inheritdoc ILottery
      */
+    function participantsCount() external view returns (uint256) {
+        return _state.participantsCount;
+    }
+
+    /**
+     * @inheritdoc ILottery
+     */
+    function isActualParticipant(address _user) external view returns (bool) {
+        return (_status() != Types.LotteryStatus.Closed &&
+            participantsInfo[lotteryNumber][_user].ticketsBought > 0);
+    }
+
+    /**
+     * @inheritdoc ILottery
+     */
+    function latestContactDetails(
+        address _user
+    ) external view returns (bytes memory) {
+        ParticipantInfo storage actualUserInfo = participantsInfo[
+            lotteryNumber
+        ][_user];
+
+        require(actualUserInfo.ticketsBought > 0, HasNotRegistered(_user));
+
+        return actualUserInfo.encryptedContactDetails;
+    }
+
+    /**
+     * @inheritdoc ILottery
+     */
     function registrationEndTime() external view returns (uint256) {
         return _state.registrationEndTime;
     }
