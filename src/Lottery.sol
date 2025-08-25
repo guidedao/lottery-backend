@@ -66,9 +66,9 @@ contract Lottery is
     uint256 public constant REFUND_WINDOW = 14 days;
 
     /* Role name hashes for AccessControl */
-    bytes32 private constant LOTTERY_ORGANIZER_ROLE =
+    bytes32 public constant LOTTERY_ORGANIZER_ROLE =
         keccak256(abi.encode("LOTTERY_ORGANIZER_ROLE"));
-    bytes32 private constant LOTTERY_OPERATOR_ROLE =
+    bytes32 public constant LOTTERY_OPERATOR_ROLE =
         keccak256(abi.encode("LOTTERY_OPERATOR_ROLE"));
 
     /**
@@ -116,7 +116,8 @@ contract Lottery is
      * @notice Returns participant information from particular lottery by its number
      * and participant index.
      */
-    mapping(uint256 lotteryNumber => mapping(address user => ParticipantInfo)) participantsInfo;
+    mapping(uint256 lotteryNumber => mapping(address user => ParticipantInfo))
+        public participantsInfo;
 
     /**
      * @notice Returns refund batch by its id.
