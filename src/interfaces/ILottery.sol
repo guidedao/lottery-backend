@@ -282,12 +282,15 @@ interface ILottery {
 
     /**
      * @notice Change current organizer.
-     * @dev Emits {OrganizerChanged} event.
+     * @dev Revokes organizer role from current organizer
+     * and grants such to a new one.
+     *
+     * Emits {OrganizerChanged}.
      *
      * Requirements:
-     * - Caller has permissions to change organizer
+     * - Caller is current organizer
      */
-    function setOrganizer(address _newOrganizer) external;
+    function changeOrganizer(address _newOrganizer) external;
 
     /**
      * @notice Change current ticket price.
