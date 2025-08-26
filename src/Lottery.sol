@@ -108,6 +108,8 @@ contract Lottery is
 
     LotteryState private _state;
 
+    uint256 public ticketPrice = LotteryConfig.INITIAL_TICKET_PRICE;
+
     /**
      * @notice Returns current lottery number.
      * If no one was started up to this moment, returns 0.
@@ -154,8 +156,6 @@ contract Lottery is
      * @dev Updated in {fulfillRandomWords}.
      */
     uint256 public organizerFunds;
-
-    uint256 public ticketPrice = LotteryConfig.INITIAL_TICKET_PRICE;
 
     address public lastWinner;
 
