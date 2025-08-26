@@ -32,8 +32,6 @@ library VRFCoordinatorMockConfig {
  * See details here: https://docs.chain.link/vrf/v2-5/overview/subscription
  */
 library VRFConsumerConfig {
-    address constant VRF_COORDINATOR = address(0);
-    uint256 constant SUBSCRIPTION_ID = 0;
     bytes32 constant KEY_HASH =
         0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
     uint32 constant CALLBACK_GAS_LIMIT = 1500000;
@@ -41,13 +39,14 @@ library VRFConsumerConfig {
 }
 
 /**
- * @dev Initial lottery configuration for deployment.
- *
- * If you are running locally, `ORGANIZER` (account that can collect
- * earned funds from lottery and expired refunds) can be directly set
- * to your address just for the sake of convenience.
+ * @dev Initial lottery configuration for deployment with
+ * essential business logic variables.
  */
 library LotteryConfig {
-    address constant ORGANIZER = 0x000000000000000000000000000000000000dEaD;
-    uint256 constant TICKET_PRICE = 0.03 ether;
+    uint256 constant INITIAL_TICKET_PRICE = 0.02 ether;
+    uint8 constant TARGET_PARTICIPANTS_NUMBER = 20;
+    uint16 constant MAX_PARTICIPANTS_NUMBER = 200;
+    uint256 constant REGISTRATION_DURATION = 21 days;
+    uint256 constant MAX_EXTENSION_TIME = 7 days;
+    uint256 constant REFUND_WINDOW = 14 days;
 }

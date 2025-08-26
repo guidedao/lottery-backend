@@ -23,20 +23,28 @@ contract AddConsumerScript is Script {
             vm.prompt("Enter lottery contract address")
         );
 
-        run(consumer);
+        address vrfCoordinator = vm.parseAddress(
+            vm.prompt("Enter Chainlink VRF coordinator address")
+        );
+        uint256 subscriptionId = vm.parseUint(
+            vm.prompt("Enter Chainlink VRF subscription ID")
+        );
+
+        run(consumer, subscriptionId, vrfCoordinator);
     }
 
-    function run(address consumer) public {
+    function run(
+        address _consumer,
+        uint256 _subscriptionId,
+        address _vrfCoordinator
+    ) public {
         vm.startBroadcast();
 
         VRFCoordinatorV2_5Mock vrfCoordinatorMock = VRFCoordinatorV2_5Mock(
-            VRFConsumerConfig.VRF_COORDINATOR
+            _vrfCoordinator
         );
 
-        vrfCoordinatorMock.addConsumer(
-            VRFConsumerConfig.SUBSCRIPTION_ID,
-            consumer
-        );
+        vrfCoordinatorMock.addConsumer(_subscriptionId, _consumer);
 
         vm.stopBroadcast();
 

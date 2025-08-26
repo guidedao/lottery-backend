@@ -10,6 +10,9 @@ import {IGuideDAOToken} from "./interfaces/IGuideDAOToken.sol";
 import {ILottery} from "./interfaces/ILottery.sol";
 import {ILotteryErrors} from "./interfaces/ILotteryErrors.sol";
 
+import {LotteryConfig} from "./libraries/Configs.sol";
+import {VRFConsumerConfig} from "./libraries/Configs.sol";
+
 import {Types} from "./libraries/Types.sol";
 
 /**
@@ -58,12 +61,14 @@ contract Lottery is
         uint256 totalTicketsCount;
     }
 
-    /* dummy values for now */
-    uint8 public constant TARGET_PARTICIPANTS_NUMBER = 2;
-    uint16 public constant MAX_PARTICIPANTS_NUMBER = 200;
-    uint256 public constant REGISTRATION_DURATION = 21 days;
-    uint256 public constant MAX_EXTENSION_TIME = 7 days;
-    uint256 public constant REFUND_WINDOW = 14 days;
+    /* Chainlink VRF configuration (see VRFConsumerConfig in
+     libraries/Configs.sol) */
+    bytes32 private constant KEY_HASH = VRFConsumerConfig.KEY_HASH;
+    uint32 private constant CALLBACK_GAS_LIMIT =
+        VRFConsumerConfig.CALLBACK_GAS_LIMIT;
+    uint16 private constant REQUEST_CONFIRMATIONS =
+        VRFConsumerConfig.REQUEST_CONFIRMATIONS;
+    uint256 private immutable SUBSCRIPTION_ID;
 
     /* Role name hashes for AccessControl */
     bytes32 public constant LOTTERY_ORGANIZER_ROLE =
@@ -82,12 +87,16 @@ contract Lottery is
      */
     uint8 public constant MAX_PARTICIPANTS_TO_CLEAR = 40;
 
-    /* Chainlink VRF configuration (see VRFConsumerConfig in
-     libraries/Configs.sol) */
-    uint256 private immutable SUBSCRIPTION_ID;
-    bytes32 private immutable KEY_HASH;
-    uint32 private immutable CALLBACK_GAS_LIMIT;
-    uint16 private immutable REQUEST_CONFIRMATIONS;
+    /* Business logic values */
+    uint8 public constant TARGET_PARTICIPANTS_NUMBER =
+        LotteryConfig.TARGET_PARTICIPANTS_NUMBER;
+    uint16 public constant MAX_PARTICIPANTS_NUMBER =
+        LotteryConfig.MAX_PARTICIPANTS_NUMBER;
+    uint256 public constant REGISTRATION_DURATION =
+        LotteryConfig.REGISTRATION_DURATION;
+    uint256 public constant MAX_EXTENSION_TIME =
+        LotteryConfig.MAX_EXTENSION_TIME;
+    uint256 public constant REFUND_WINDOW = LotteryConfig.REFUND_WINDOW;
 
     IGuideDAOToken public immutable GUIDE_DAO_TOKEN;
 
@@ -146,7 +155,7 @@ contract Lottery is
      */
     uint256 public organizerFunds;
 
-    uint256 public ticketPrice;
+    uint256 public ticketPrice = LotteryConfig.INITIAL_TICKET_PRICE;
 
     address public lastWinner;
 
@@ -179,21 +188,15 @@ contract Lottery is
 
     constructor(
         address organizer,
-        uint256 _ticketPrice,
         address _guideDAOToken,
         address _vrfCoordinator,
-        uint256 _subscriptionId,
-        bytes32 _keyHash,
-        uint32 _callbackGasLimit,
-        uint16 _requestConfirmations
+        uint256 _subscriptionId
     ) VRFConsumerBaseV2Plus(_vrfCoordinator) {
         _organizer = organizer;
-        ticketPrice = _ticketPrice;
+
         GUIDE_DAO_TOKEN = IGuideDAOToken(_guideDAOToken);
+
         SUBSCRIPTION_ID = _subscriptionId;
-        KEY_HASH = _keyHash;
-        CALLBACK_GAS_LIMIT = _callbackGasLimit;
-        REQUEST_CONFIRMATIONS = _requestConfirmations;
 
         _setRoleAdmin(LOTTERY_OPERATOR_ROLE, LOTTERY_ORGANIZER_ROLE);
 
@@ -302,7 +305,11 @@ contract Lottery is
 
         require(
             msg.value == ticketPrice * _ticketsAmount,
-            InsufficientFunds(msg.sender, msg.value, ticketPrice)
+            InsufficientFunds(
+                msg.sender,
+                msg.value,
+                ticketPrice * _ticketsAmount
+            )
         );
 
         LotteryState storage state = _state;
@@ -348,7 +355,7 @@ contract Lottery is
 
         require(
             msg.value == ticketPrice * _amount,
-            InsufficientFunds(msg.sender, msg.value, ticketPrice)
+            InsufficientFunds(msg.sender, msg.value, ticketPrice * _amount)
         );
 
         actualParticipantsInfo[msg.sender].ticketsBought += _amount;
