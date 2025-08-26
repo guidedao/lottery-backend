@@ -17,25 +17,36 @@ import {VRFConsumerConfig, LotteryConfig} from "src/libraries/Configs.sol";
  */
 contract LotteryDeployScript is Script {
     function run() external {
+        address organizer = vm.parseAddress(
+            vm.prompt("Enter initial organizer address")
+        );
         address guideDAOToken = vm.parseAddress(
             vm.prompt("Enter GuideDAO token address")
         );
 
-        run(guideDAOToken);
+        address vrfCoordinator = vm.parseAddress(
+            vm.prompt("Enter Chainlink VRF coordinator address")
+        );
+        uint256 subscriptionId = vm.parseUint(
+            vm.prompt("Enter Chainlink VRF subscription ID")
+        );
+
+        run(organizer, guideDAOToken, vrfCoordinator, subscriptionId);
     }
 
-    function run(address guideDaoToken) public {
+    function run(
+        address _organizer,
+        address _guideDAOToken,
+        address _vrfCoordinator,
+        uint256 _subscriptionId
+    ) public {
         vm.startBroadcast();
 
         Lottery lottery = new Lottery(
-            LotteryConfig.ORGANIZER,
-            LotteryConfig.TICKET_PRICE,
-            guideDaoToken,
-            VRFConsumerConfig.VRF_COORDINATOR,
-            VRFConsumerConfig.SUBSCRIPTION_ID,
-            VRFConsumerConfig.KEY_HASH,
-            VRFConsumerConfig.CALLBACK_GAS_LIMIT,
-            VRFConsumerConfig.REQUEST_CONFIRMATIONS
+            _organizer,
+            _guideDAOToken,
+            _vrfCoordinator,
+            _subscriptionId
         );
 
         vm.stopBroadcast();
