@@ -20,6 +20,11 @@ contract LotteryDeployScript is Script {
         address organizer = vm.parseAddress(
             vm.prompt("Enter initial organizer address")
         );
+        address nftFallbackRecipient = vm.parseAddress(
+            vm.prompt(
+                "Enter address (with no code at account) which will be used as a fallback NFT recipient"
+            )
+        );
         address guideDAOToken = vm.parseAddress(
             vm.prompt("Enter GuideDAO token address")
         );
@@ -31,11 +36,18 @@ contract LotteryDeployScript is Script {
             vm.prompt("Enter Chainlink VRF subscription ID")
         );
 
-        run(organizer, guideDAOToken, vrfCoordinator, subscriptionId);
+        run(
+            organizer,
+            nftFallbackRecipient,
+            guideDAOToken,
+            vrfCoordinator,
+            subscriptionId
+        );
     }
 
     function run(
         address _organizer,
+        address _nftFallbackRecipient,
         address _guideDAOToken,
         address _vrfCoordinator,
         uint256 _subscriptionId
@@ -44,6 +56,7 @@ contract LotteryDeployScript is Script {
 
         Lottery lottery = new Lottery(
             _organizer,
+            _nftFallbackRecipient,
             _guideDAOToken,
             _vrfCoordinator,
             _subscriptionId
@@ -51,6 +64,6 @@ contract LotteryDeployScript is Script {
 
         vm.stopBroadcast();
 
-        console.log("Lottery contract deployed to: ", address(lottery));
+        console.log("Lottery contract deployed to:", address(lottery));
     }
 }

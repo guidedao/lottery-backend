@@ -29,7 +29,7 @@ library LotteryConfig {
 }
 ```
 
-You probably won't need to change anything for your local setup, however you can do that if you want.
+You probably won't need to change anything for setting up locally, however, you can do that if you want.
 
 ### Running Locally
 
@@ -69,16 +69,16 @@ You will instantly need the VRF coordinator address to fund a subscription and r
 forge script script/local/FundSubscription.s.sol:FundSubscriptionScript --rpc-url http://localhost:8545 --broadcast --private-key <PRIVATE_KEY>
 ```
 
-Then you have will have to deploy the lottery contract (you will have to specify initial organizer and GuideDAO token address altogether with VRF coordinator address and subscription ID):
+Then you have will have to deploy the lottery contract (you will have to specify initial organizer and GuideDAO token address along with VRF coordinator address and subscription ID):
 
 ```bash
 forge script script/LotteryDeploy.s.sol:LotteryDeployScript --rpc-url http://localhost:8545 --broadcast --private-key <PRIVATE_KEY>
 ```
 
-And add the lottery in VRF consumers list (now you will need to provide the lottery and coordinator addresses and corresponding subscription ID):
+And add the lottery in VRF consumers list (now you will need to provide the lottery, GuideDAO NFT fallback recipient and coordinator addresses and corresponding subscription ID):
 
 ```bash
-forge script script/AddConsumer.s.sol:AddConsumerScript --rpc-url http://localhost:8545 --broadcast --private-key <PRIVATE_KEY>
+forge script script/local/AddConsumer.s.sol:AddConsumerScript --rpc-url http://localhost:8545 --broadcast --private-key <PRIVATE_KEY>
 ```
 
 Now you have fully prepared local chain, and you can use [http://localhost:8545](http://localhost:8545) as RPC URL for your purposes.
