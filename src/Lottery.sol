@@ -100,13 +100,19 @@ contract Lottery is
 
     IGuideDAOToken public immutable GUIDE_DAO_TOKEN;
 
+    LotteryState private _state;
+
     /**
      * @dev Address that can receive money from lotteries and
      * expired refunds.
      */
-    address private _organizer;
+    address public organizer;
 
-    LotteryState private _state;
+    /**
+     * @dev Fallback address (with no code) to receive NFT if winner's account
+     * has code or in impossible case in {fulfillRandomWords}.
+     */
+    address public nftFallbackRecipient;
 
     uint256 public ticketPrice = LotteryConfig.INITIAL_TICKET_PRICE;
 
@@ -187,12 +193,14 @@ contract Lottery is
     error NothingToClear(uint256 lotteryNumber, uint256 fromParticipantIndex);
 
     constructor(
-        address organizer,
+        address _organizer,
+        address _nftFallbackRecipient,
         address _guideDAOToken,
         address _vrfCoordinator,
         uint256 _subscriptionId
     ) VRFConsumerBaseV2Plus(_vrfCoordinator) {
-        _organizer = organizer;
+        _setOrganizer(_organizer);
+        _setNftFallbackRecipient(_nftFallbackRecipient);
 
         GUIDE_DAO_TOKEN = IGuideDAOToken(_guideDAOToken);
 
@@ -224,13 +232,21 @@ contract Lottery is
     function latestContactDetails(
         address _user
     ) external view returns (bytes memory) {
-        ParticipantInfo storage actualUserInfo = participantsInfo[
-            lotteryNumber
-        ][_user];
+        for (uint i = 0; i < LOTTERY_DATA_FRESHNESS_INTERVAL; i++) {
+            uint256 currentLotteryNumber = lotteryNumber - i;
 
-        require(actualUserInfo.ticketsBought > 0, HasNotRegistered(_user));
+            require(currentLotteryNumber > 0, NoContactDetails(_user));
 
-        return actualUserInfo.encryptedContactDetails;
+            ParticipantInfo storage actualUserInfo = participantsInfo[
+                currentLotteryNumber
+            ][_user];
+
+            if (actualUserInfo.ticketsBought > 0) {
+                return actualUserInfo.encryptedContactDetails;
+            }
+        }
+
+        revert NoContactDetails(_user);
     }
 
     /**
@@ -283,6 +299,8 @@ contract Lottery is
             )
         );
 
+        require(msg.sender.code.length == 0, HasCode(msg.sender));
+
         require(
             GUIDE_DAO_TOKEN.balanceOf(msg.sender) == 0,
             AlreadyHasToken(msg.sender)
@@ -296,16 +314,11 @@ contract Lottery is
             AlreadyRegistered(msg.sender)
         );
 
-        require(
-            _state.participantsCount < MAX_PARTICIPANTS_NUMBER,
-            ParticipantsLimitExceeded(MAX_PARTICIPANTS_NUMBER)
-        );
-
         require(_ticketsAmount > 0, ZeroTicketsRequested(msg.sender));
 
         require(
             msg.value == ticketPrice * _ticketsAmount,
-            InsufficientFunds(
+            IncorrectPaymentAmount(
                 msg.sender,
                 msg.value,
                 ticketPrice * _ticketsAmount
@@ -355,7 +368,7 @@ contract Lottery is
 
         require(
             msg.value == ticketPrice * _amount,
-            InsufficientFunds(msg.sender, msg.value, ticketPrice * _amount)
+            IncorrectPaymentAmount(msg.sender, msg.value, ticketPrice * _amount)
         );
 
         actualParticipantsInfo[msg.sender].ticketsBought += _amount;
@@ -638,10 +651,9 @@ contract Lottery is
     /**
      * @inheritdoc ILottery
      */
-    function withdrawOrganizerFunds()
-        external
-        onlyRole(LOTTERY_ORGANIZER_ROLE)
-    {
+    function withdrawOrganizerFunds(
+        address _recipient
+    ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
         uint256 fundsToWithdraw = organizerFunds;
 
         require(fundsToWithdraw > 0, ZeroOrganizerBalance());
@@ -650,16 +662,17 @@ contract Lottery is
 
         emit OrganizerFundsWithdrawn(fundsToWithdraw);
 
-        (bool success, ) = _organizer.call{value: fundsToWithdraw}("");
+        (bool success, ) = _recipient.call{value: fundsToWithdraw}("");
 
-        require(success, WithdrawFailed(_organizer));
+        require(success, WithdrawFailed(_recipient));
     }
 
     /**
      * @inheritdoc ILottery
      */
     function collectExpiredRefunds(
-        uint256 _batchId
+        uint256 _batchId,
+        address _recipient
     ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
         RefundBatch storage batch = refundBatches[_batchId];
 
@@ -675,9 +688,9 @@ contract Lottery is
 
         emit ExpiredRefundsCollected(_batchId, totalUnclaimedFunds);
 
-        (bool success, ) = _organizer.call{value: totalUnclaimedFunds}("");
+        (bool success, ) = _recipient.call{value: totalUnclaimedFunds}("");
 
-        require(success, WithdrawFailed(_organizer));
+        require(success, WithdrawFailed(_recipient));
     }
 
     /**
@@ -686,13 +699,24 @@ contract Lottery is
     function changeOrganizer(
         address _newOrganizer
     ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
-        require(_newOrganizer != address(0), ZeroOrganizerAddress());
-
         _grantRole(LOTTERY_ORGANIZER_ROLE, _newOrganizer);
-        _revokeRole(LOTTERY_ORGANIZER_ROLE, _organizer);
+        _revokeRole(LOTTERY_ORGANIZER_ROLE, organizer);
 
-        emit OrganizerChanged(_organizer, _newOrganizer);
-        _organizer = _newOrganizer;
+        emit OrganizerChanged(organizer, _newOrganizer);
+        _setOrganizer(_newOrganizer);
+    }
+
+    /**
+     * @inheritdoc ILottery
+     */
+    function changeNftFallbackRecipient(
+        address _newNftFallbackRecipient
+    ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
+        emit NftFallbackRecipientChanged(
+            nftFallbackRecipient,
+            _newNftFallbackRecipient
+        );
+        _setNftFallbackRecipient(_newNftFallbackRecipient);
     }
 
     /**
@@ -732,7 +756,7 @@ contract Lottery is
         delete _state;
 
         try GUIDE_DAO_TOKEN.mintTo(winner) {} catch {
-            GUIDE_DAO_TOKEN.mintTo(_organizer);
+            GUIDE_DAO_TOKEN.mintTo(nftFallbackRecipient);
         }
 
         emit WinnerRevealed(lotteryNumber, winner, block.timestamp);
@@ -773,7 +797,7 @@ contract Lottery is
 
     /**
      * @notice Function to find winner address from winner ticket id.
-     * @dev Returns organizer address, if total tickets amount is less than
+     * @dev Returns NFT fallback recipient address, if total tickets amount is less than
      * winner ticket id, which should really never happen.
      */
     function _findWinnerFromUsers(
@@ -791,6 +815,25 @@ contract Lottery is
             }
         }
 
-        return _organizer;
+        return nftFallbackRecipient;
+    }
+
+    function _setOrganizer(address _organizer) internal {
+        require(_organizer != address(0), ZeroOrganizerAddress());
+
+        organizer = _organizer;
+    }
+
+    function _setNftFallbackRecipient(address _nftFallbackRecipient) internal {
+        require(
+            _nftFallbackRecipient != address(0),
+            ZeroNftFallbackRecipientAddress()
+        );
+        require(
+            _nftFallbackRecipient.code.length == 0,
+            HasCode(_nftFallbackRecipient)
+        );
+
+        nftFallbackRecipient = _nftFallbackRecipient;
     }
 }

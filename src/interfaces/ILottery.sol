@@ -98,6 +98,21 @@ interface ILottery {
     event OrganizerChanged(address indexed from, address indexed to);
 
     /**
+     * @notice GuideDAO NFT fallback recipient has been changed from old to new value.
+     */
+    event NftFallbackRecipientChanged(address indexed from, address indexed to);
+
+    /**
+     * @notice Returns number of lotteries that must pass to make
+     * it possible to clear its data.
+     *
+     * User contact details left before this interval are considered stale
+     * even if they has not been cleared, and hence they are not returned as
+     * result of {latestContactDetails} call.
+     */
+    function LOTTERY_DATA_FRESHNESS_INTERVAL() external pure returns (uint8);
+
+    /**
      * @notice Returns maximum patricipants number, which is constant.
      */
     function MAX_PARTICIPANTS_NUMBER() external pure returns (uint16);
@@ -115,11 +130,11 @@ interface ILottery {
     function isActualParticipant(address _user) external view returns (bool);
 
     /**
-     * @notice Returns encrypted contact details that user has left for the
-     * latest (including current) lottery.
+     * @notice Returns latest encrypted contact details that user has left.
      *
      * Requirements:
-     * - User has participated in the latest lottery
+     * - User has participated in at least one
+     * from last `LOTTERY_DATA_FRESHNESS_INTERVAL` lotteries.
      */
     function latestContactDetails(
         address _user
@@ -161,6 +176,7 @@ interface ILottery {
      *
      * Requirements:
      * - `_amount` is not zero
+     * - User account has no code
      * - User is not a lottery participant yet
      * - New total number of participants must not exceed the limit
      * - Registration is currently open
@@ -257,7 +273,7 @@ interface ILottery {
     function requestWinner() external;
 
     /**
-     * @notice Withdraw all accessible organizer funds to their address.
+     * @notice Withdraw all accessible organizer funds to `_recipient` address.
      * @dev Note: accessible organizer funds are updated only after successful
      * lottery event in {fulfillRandomWords} callback.
      *
@@ -267,7 +283,7 @@ interface ILottery {
      * - Caller has permissions to withdraw money
      * - Accessible organizer funds is more than zero
      */
-    function withdrawOrganizerFunds() external;
+    function withdrawOrganizerFunds(address _recipient) external;
 
     /**
      * @notice Withdraw all refund money with expired deadlines from
@@ -278,7 +294,10 @@ interface ILottery {
      * - Caller has permission to withdraw money
      * - There is more than zero expired refunds
      */
-    function collectExpiredRefunds(uint256 _batchId) external;
+    function collectExpiredRefunds(
+        uint256 _batchId,
+        address _recipient
+    ) external;
 
     /**
      * @notice Change current organizer.
@@ -289,8 +308,25 @@ interface ILottery {
      *
      * Requirements:
      * - Caller is current organizer
+     * - New organizer is not zero address
      */
     function changeOrganizer(address _newOrganizer) external;
+
+    /**
+     * @notice Change current organizer.
+     * @dev Revokes organizer role from current organizer
+     * and grants such to a new one.
+     *
+     * Emits {OrganizerChanged}.
+     *
+     * Requirements:
+     * - Caller is current organizer
+     * - New NFT fallback recipient is not zero address
+     * - New NFT fallback recipient account has no code
+     */
+    function changeNftFallbackRecipient(
+        address _newNftFallbackRecipient
+    ) external;
 
     /**
      * @notice Change current ticket price.
@@ -299,6 +335,7 @@ interface ILottery {
      * Requirements:
      * - Caller has permissions to change ticket price
      * - Lottery is closed at the moment
+     * - New price is greater than zero
      */
     function setTicketPrice(uint256 _newTicketPrice) external;
 }
