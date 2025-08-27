@@ -95,6 +95,27 @@ To check code for linting errors, run:
 solhint ./**/*.sol
 ```
 
+## Tests
+
+To run tests, use:
+
+```bash
+forge test
+```
+
+To see tests coverage, use:
+
+```bash
+forge coverage
+```
+
+Or if you want to get detailed HTML report:
+
+```bash
+mnkdir coverage
+forge coverage  --report lcov --report-file coverage/lcov.info && genhtml coverage/lcov.info --branch-coverage --output-dir coverage
+```
+
 ## Project Structure
 
 The main source code is organized as follows:
