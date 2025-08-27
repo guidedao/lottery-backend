@@ -18,7 +18,12 @@ import {Types} from "./libraries/Types.sol";
 /**
  * @notice Main lottery contract.
  */
-contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessControl {
+contract Lottery is
+    ILottery,
+    ILotteryErrors,
+    VRFConsumerBaseV2Plus,
+    AccessControl
+{
     /**
      * @notice Information about every lottery participant.
      * @dev `participantIndex` helps to map given participant address
@@ -59,13 +64,17 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
     /* Chainlink VRF configuration (see VRFConsumerConfig in
      libraries/Configs.sol) */
     bytes32 private constant KEY_HASH = VRFConsumerConfig.KEY_HASH;
-    uint32 private constant CALLBACK_GAS_LIMIT = VRFConsumerConfig.CALLBACK_GAS_LIMIT;
-    uint16 private constant REQUEST_CONFIRMATIONS = VRFConsumerConfig.REQUEST_CONFIRMATIONS;
+    uint32 private constant CALLBACK_GAS_LIMIT =
+        VRFConsumerConfig.CALLBACK_GAS_LIMIT;
+    uint16 private constant REQUEST_CONFIRMATIONS =
+        VRFConsumerConfig.REQUEST_CONFIRMATIONS;
     uint256 private immutable SUBSCRIPTION_ID;
 
     /* Role name hashes for AccessControl */
-    bytes32 public constant LOTTERY_ORGANIZER_ROLE = keccak256(abi.encode("LOTTERY_ORGANIZER_ROLE"));
-    bytes32 public constant LOTTERY_OPERATOR_ROLE = keccak256(abi.encode("LOTTERY_OPERATOR_ROLE"));
+    bytes32 public constant LOTTERY_ORGANIZER_ROLE =
+        keccak256(abi.encode("LOTTERY_ORGANIZER_ROLE"));
+    bytes32 public constant LOTTERY_OPERATOR_ROLE =
+        keccak256(abi.encode("LOTTERY_OPERATOR_ROLE"));
 
     /**
      * @notice Number of lotteries that must pass after a certain one
@@ -79,10 +88,14 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
     uint8 public constant MAX_PARTICIPANTS_TO_CLEAR = 40;
 
     /* Business logic values */
-    uint8 public constant TARGET_PARTICIPANTS_NUMBER = LotteryConfig.TARGET_PARTICIPANTS_NUMBER;
-    uint16 public constant MAX_PARTICIPANTS_NUMBER = LotteryConfig.MAX_PARTICIPANTS_NUMBER;
-    uint256 public constant REGISTRATION_DURATION = LotteryConfig.REGISTRATION_DURATION;
-    uint256 public constant MAX_EXTENSION_TIME = LotteryConfig.MAX_EXTENSION_TIME;
+    uint8 public constant TARGET_PARTICIPANTS_NUMBER =
+        LotteryConfig.TARGET_PARTICIPANTS_NUMBER;
+    uint16 public constant MAX_PARTICIPANTS_NUMBER =
+        LotteryConfig.MAX_PARTICIPANTS_NUMBER;
+    uint256 public constant REGISTRATION_DURATION =
+        LotteryConfig.REGISTRATION_DURATION;
+    uint256 public constant MAX_EXTENSION_TIME =
+        LotteryConfig.MAX_EXTENSION_TIME;
     uint256 public constant REFUND_WINDOW = LotteryConfig.REFUND_WINDOW;
 
     IGuideDAOToken public immutable GUIDE_DAO_TOKEN;
@@ -113,13 +126,15 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
      * @notice Returns participant address from particular lottery by its number
      * and participant index.
      */
-    mapping(uint256 lotteryNumber => mapping(uint256 index => address)) public participants;
+    mapping(uint256 lotteryNumber => mapping(uint256 index => address))
+        public participants;
 
     /**
      * @notice Returns participant information from particular lottery by its number
      * and participant index.
      */
-    mapping(uint256 lotteryNumber => mapping(address user => ParticipantInfo)) public participantsInfo;
+    mapping(uint256 lotteryNumber => mapping(address user => ParticipantInfo))
+        public participantsInfo;
 
     /**
      * @notice Returns refund batch by its id.
@@ -155,13 +170,20 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
      * participants and corresponding participantsInfo) has been cleared from storage,
      * from one index in {participants} to another.
      */
-    event LotteryDataCleared(uint256 lotteryNumber, uint256 fromParticipantIndex, uint256 toParticipantIndex);
+    event LotteryDataCleared(
+        uint256 lotteryNumber,
+        uint256 fromParticipantIndex,
+        uint256 toParticipantIndex
+    );
 
     /**
      * @notice Unable to clear data about lottery participants because
      * current lottery number is not sufficient.
      */
-    error TooEarlyToClearData(uint256 receivedCurrentLotteryNumber, uint256 minimumCurrentLotteryNumber);
+    error TooEarlyToClearData(
+        uint256 receivedCurrentLotteryNumber,
+        uint256 minimumCurrentLotteryNumber
+    );
 
     /**
      * @dev There is no data about participants of lottery
@@ -200,19 +222,24 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
      * @inheritdoc ILottery
      */
     function isActualParticipant(address _user) external view returns (bool) {
-        return (_status() != Types.LotteryStatus.Closed && participantsInfo[lotteryNumber][_user].ticketsBought > 0);
+        return (_status() != Types.LotteryStatus.Closed &&
+            participantsInfo[lotteryNumber][_user].ticketsBought > 0);
     }
 
     /**
      * @inheritdoc ILottery
      */
-    function latestContactDetails(address _user) external view returns (bytes memory) {
+    function latestContactDetails(
+        address _user
+    ) external view returns (bytes memory) {
         for (uint256 i = 0; i < LOTTERY_DATA_FRESHNESS_INTERVAL; i++) {
             uint256 currentLotteryNumber = lotteryNumber - i;
 
             require(currentLotteryNumber > 0, NoContactDetails(_user));
 
-            ParticipantInfo storage actualUserInfo = participantsInfo[currentLotteryNumber][_user];
+            ParticipantInfo storage actualUserInfo = participantsInfo[
+                currentLotteryNumber
+            ][_user];
 
             if (actualUserInfo.ticketsBought > 0) {
                 return actualUserInfo.encryptedContactDetails;
@@ -259,31 +286,49 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
     /**
      * @inheritdoc ILottery
      */
-    function enter(uint256 _ticketsAmount, bytes calldata _encryptedContactDetails) external payable {
+    function enter(
+        uint256 _ticketsAmount,
+        bytes calldata _encryptedContactDetails
+    ) external payable {
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.OpenedForRegistration,
-            IncorrectLotteryStatus(currentStatus, Types.LotteryStatus.OpenedForRegistration)
+            IncorrectLotteryStatus(
+                currentStatus,
+                Types.LotteryStatus.OpenedForRegistration
+            )
         );
 
         require(msg.sender.code.length == 0, HasCode(msg.sender));
 
-        require(GUIDE_DAO_TOKEN.balanceOf(msg.sender) == 0, AlreadyHasToken(msg.sender));
+        require(
+            GUIDE_DAO_TOKEN.balanceOf(msg.sender) == 0,
+            AlreadyHasToken(msg.sender)
+        );
 
-        mapping(address participant => ParticipantInfo) storage actualParticipantsInfo = participantsInfo[lotteryNumber];
+        mapping(address participant => ParticipantInfo)
+            storage actualParticipantsInfo = participantsInfo[lotteryNumber];
 
-        require(actualParticipantsInfo[msg.sender].ticketsBought == 0, AlreadyRegistered(msg.sender));
+        require(
+            actualParticipantsInfo[msg.sender].ticketsBought == 0,
+            AlreadyRegistered(msg.sender)
+        );
 
         require(_ticketsAmount > 0, ZeroTicketsRequested(msg.sender));
 
         require(
             msg.value == ticketPrice * _ticketsAmount,
-            IncorrectPaymentAmount(msg.sender, msg.value, ticketPrice * _ticketsAmount)
+            IncorrectPaymentAmount(
+                msg.sender,
+                msg.value,
+                ticketPrice * _ticketsAmount
+            )
         );
 
         LotteryState storage state = _state;
 
-        mapping(uint256 index => address) storage actualParticipants = participants[lotteryNumber];
+        mapping(uint256 index => address)
+            storage actualParticipants = participants[lotteryNumber];
 
         actualParticipants[state.participantsCount] = msg.sender;
 
@@ -305,17 +350,25 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.OpenedForRegistration,
-            IncorrectLotteryStatus(currentStatus, Types.LotteryStatus.OpenedForRegistration)
+            IncorrectLotteryStatus(
+                currentStatus,
+                Types.LotteryStatus.OpenedForRegistration
+            )
         );
 
-        mapping(address participant => ParticipantInfo) storage actualParticipantsInfo = participantsInfo[lotteryNumber];
+        mapping(address participant => ParticipantInfo)
+            storage actualParticipantsInfo = participantsInfo[lotteryNumber];
 
-        require(actualParticipantsInfo[msg.sender].ticketsBought > 0, HasNotRegistered(msg.sender));
+        require(
+            actualParticipantsInfo[msg.sender].ticketsBought > 0,
+            HasNotRegistered(msg.sender)
+        );
 
         require(_amount > 0, ZeroTicketsRequested(msg.sender));
 
         require(
-            msg.value == ticketPrice * _amount, IncorrectPaymentAmount(msg.sender, msg.value, ticketPrice * _amount)
+            msg.value == ticketPrice * _amount,
+            IncorrectPaymentAmount(msg.sender, msg.value, ticketPrice * _amount)
         );
 
         actualParticipantsInfo[msg.sender].ticketsBought += _amount;
@@ -332,16 +385,24 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.OpenedForRegistration,
-            IncorrectLotteryStatus(currentStatus, Types.LotteryStatus.OpenedForRegistration)
+            IncorrectLotteryStatus(
+                currentStatus,
+                Types.LotteryStatus.OpenedForRegistration
+            )
         );
 
         require(_amount > 0, ZeroTicketsRequested(msg.sender));
 
-        mapping(address participant => ParticipantInfo) storage actualParticipantsInfo = participantsInfo[lotteryNumber];
+        mapping(address participant => ParticipantInfo)
+            storage actualParticipantsInfo = participantsInfo[lotteryNumber];
 
         require(
             actualParticipantsInfo[msg.sender].ticketsBought >= _amount,
-            InsufficientTicketsNumber(msg.sender, actualParticipantsInfo[msg.sender].ticketsBought, _amount)
+            InsufficientTicketsNumber(
+                msg.sender,
+                actualParticipantsInfo[msg.sender].ticketsBought,
+                _amount
+            )
         );
 
         LotteryState storage state = _state;
@@ -351,15 +412,20 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
         _state.totalTicketsCount -= _amount;
 
         if (actualParticipantsInfo[msg.sender].ticketsBought == 0) {
-            uint256 participantIndex = actualParticipantsInfo[msg.sender].participantIndex;
+            uint256 participantIndex = actualParticipantsInfo[msg.sender]
+                .participantIndex;
 
-            mapping(uint256 index => address) storage actualParticipants = participants[lotteryNumber];
+            mapping(uint256 index => address)
+                storage actualParticipants = participants[lotteryNumber];
 
             if (participantIndex != state.participantsCount - 1) {
-                actualParticipants[participantIndex] = actualParticipants[state.participantsCount - 1];
+                actualParticipants[participantIndex] = actualParticipants[
+                    state.participantsCount - 1
+                ];
 
                 address movedParticipant = actualParticipants[participantIndex];
-                actualParticipantsInfo[movedParticipant].participantIndex = participantIndex;
+                actualParticipantsInfo[movedParticipant]
+                    .participantIndex = participantIndex;
             }
 
             delete actualParticipants[--state.participantsCount];
@@ -367,7 +433,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
 
         emit TicketsReturned(lotteryNumber, msg.sender, _amount);
 
-        (bool success,) = msg.sender.call{value: ticketPrice * _amount}("");
+        (bool success, ) = msg.sender.call{value: ticketPrice * _amount}("");
 
         require(success, WithdrawFailed(msg.sender));
     }
@@ -385,7 +451,9 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
             RefundBatch storage batch = refundBatches[batchId];
 
             if (block.timestamp <= batch.refundAssignmentTime + REFUND_WINDOW) {
-                uint256 userBatchRefundBalance = batch.refundBalances[msg.sender];
+                uint256 userBatchRefundBalance = batch.refundBalances[
+                    msg.sender
+                ];
 
                 batch.refundBalances[msg.sender] = 0;
                 totalRefundAmount += userBatchRefundBalance;
@@ -399,7 +467,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
 
         emit MoneyRefunded(msg.sender, totalRefundAmount);
 
-        (bool success,) = msg.sender.call{value: totalRefundAmount}("");
+        (bool success, ) = msg.sender.call{value: totalRefundAmount}("");
 
         require(success, WithdrawFailed(msg.sender));
     }
@@ -427,17 +495,25 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
     /**
      * @inheritdoc ILottery
      */
-    function extendRegistrationTime(uint256 _duration) external onlyRole(LOTTERY_OPERATOR_ROLE) {
+    function extendRegistrationTime(
+        uint256 _duration
+    ) external onlyRole(LOTTERY_OPERATOR_ROLE) {
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.OpenedForRegistration,
-            IncorrectLotteryStatus(currentStatus, Types.LotteryStatus.OpenedForRegistration)
+            IncorrectLotteryStatus(
+                currentStatus,
+                Types.LotteryStatus.OpenedForRegistration
+            )
         );
 
         LotteryState storage state = _state;
 
         uint256 desiredExtensionTime = state.totalExtensionTime + _duration;
-        require(desiredExtensionTime <= MAX_EXTENSION_TIME, ExtensionTooLong(desiredExtensionTime, MAX_EXTENSION_TIME));
+        require(
+            desiredExtensionTime <= MAX_EXTENSION_TIME,
+            ExtensionTooLong(desiredExtensionTime, MAX_EXTENSION_TIME)
+        );
 
         state.totalExtensionTime = desiredExtensionTime;
         state.registrationEndTime += _duration;
@@ -464,7 +540,9 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
         for (uint256 i = 0; i < _state.participantsCount; i++) {
             address participant = participants[lotteryNumber][i];
 
-            uint256 userRefundBalance = participantsInfo[lotteryNumber][participant].ticketsBought * ticketPrice;
+            uint256 userRefundBalance = participantsInfo[lotteryNumber][
+                participant
+            ].ticketsBought * ticketPrice;
 
             batch.refundBalances[participant] += userRefundBalance;
             batch.totalUnclaimedFunds += userRefundBalance;
@@ -484,7 +562,10 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.RegistrationEnded,
-            IncorrectLotteryStatus(currentStatus, Types.LotteryStatus.RegistrationEnded)
+            IncorrectLotteryStatus(
+                currentStatus,
+                Types.LotteryStatus.RegistrationEnded
+            )
         );
 
         _state.waitingForOracleResponse = true;
@@ -496,7 +577,9 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
                 requestConfirmations: REQUEST_CONFIRMATIONS,
                 callbackGasLimit: CALLBACK_GAS_LIMIT,
                 numWords: 1,
-                extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: false}))
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
+                )
             })
         );
 
@@ -515,11 +598,12 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
      * lottery to be cleared is at least {LOTTERY_DATA_FRESHNESS_INTERVAL}
      * - There is some data to clear at the specified index.
      */
-    function clearLotteryData(uint256 _lotteryNumberToClear, uint256 _fromParticipantIndex)
-        external
-        onlyRole(LOTTERY_OPERATOR_ROLE)
-    {
-        uint256 minimumCurrentLotteryNumber = _lotteryNumberToClear + LOTTERY_DATA_FRESHNESS_INTERVAL;
+    function clearLotteryData(
+        uint256 _lotteryNumberToClear,
+        uint256 _fromParticipantIndex
+    ) external onlyRole(LOTTERY_OPERATOR_ROLE) {
+        uint256 minimumCurrentLotteryNumber = _lotteryNumberToClear +
+            LOTTERY_DATA_FRESHNESS_INTERVAL;
         require(
             lotteryNumber >= minimumCurrentLotteryNumber,
             TooEarlyToClearData(lotteryNumber, minimumCurrentLotteryNumber)
@@ -527,12 +611,19 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
 
         uint8 clearedAmount;
 
-        mapping(uint256 index => address) storage lotteryParticipants = participants[_lotteryNumberToClear];
+        mapping(uint256 index => address)
+            storage lotteryParticipants = participants[_lotteryNumberToClear];
 
-        mapping(address participant => ParticipantInfo) storage lotteryParticipantsInfo =
-            participantsInfo[_lotteryNumberToClear];
+        mapping(address participant => ParticipantInfo)
+            storage lotteryParticipantsInfo = participantsInfo[
+                _lotteryNumberToClear
+            ];
 
-        for (uint256 i = _fromParticipantIndex; clearedAmount < MAX_PARTICIPANTS_TO_CLEAR; i++) {
+        for (
+            uint256 i = _fromParticipantIndex;
+            clearedAmount < MAX_PARTICIPANTS_TO_CLEAR;
+            i++
+        ) {
             address participant = lotteryParticipants[i];
 
             if (participant == address(0)) {
@@ -545,15 +636,24 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
             clearedAmount++;
         }
 
-        require(clearedAmount > 0, NothingToClear(_lotteryNumberToClear, _fromParticipantIndex));
+        require(
+            clearedAmount > 0,
+            NothingToClear(_lotteryNumberToClear, _fromParticipantIndex)
+        );
 
-        emit LotteryDataCleared(_lotteryNumberToClear, _fromParticipantIndex, _fromParticipantIndex + clearedAmount - 1);
+        emit LotteryDataCleared(
+            _lotteryNumberToClear,
+            _fromParticipantIndex,
+            _fromParticipantIndex + clearedAmount - 1
+        );
     }
 
     /**
      * @inheritdoc ILottery
      */
-    function withdrawOrganizerFunds(address _recipient) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
+    function withdrawOrganizerFunds(
+        address _recipient
+    ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
         uint256 fundsToWithdraw = organizerFunds;
 
         require(fundsToWithdraw > 0, ZeroOrganizerBalance());
@@ -562,7 +662,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
 
         emit OrganizerFundsWithdrawn(fundsToWithdraw);
 
-        (bool success,) = _recipient.call{value: fundsToWithdraw}("");
+        (bool success, ) = _recipient.call{value: fundsToWithdraw}("");
 
         require(success, WithdrawFailed(_recipient));
     }
@@ -570,20 +670,25 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
     /**
      * @inheritdoc ILottery
      */
-    function collectExpiredRefunds(uint256 _batchId, address _recipient) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
+    function collectExpiredRefunds(
+        uint256 _batchId,
+        address _recipient
+    ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
         RefundBatch storage batch = refundBatches[_batchId];
 
         uint256 totalUnclaimedFunds = batch.totalUnclaimedFunds;
 
         require(
-            batch.refundAssignmentTime + REFUND_WINDOW < block.timestamp && totalUnclaimedFunds > 0, NoExpiredRefunds()
+            batch.refundAssignmentTime + REFUND_WINDOW < block.timestamp &&
+                totalUnclaimedFunds > 0,
+            NoExpiredRefunds()
         );
 
         batch.totalUnclaimedFunds = 0;
 
         emit ExpiredRefundsCollected(_batchId, totalUnclaimedFunds);
 
-        (bool success,) = _recipient.call{value: totalUnclaimedFunds}("");
+        (bool success, ) = _recipient.call{value: totalUnclaimedFunds}("");
 
         require(success, WithdrawFailed(_recipient));
     }
@@ -591,7 +696,9 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
     /**
      * @inheritdoc ILottery
      */
-    function changeOrganizer(address _newOrganizer) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
+    function changeOrganizer(
+        address _newOrganizer
+    ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
         _grantRole(LOTTERY_ORGANIZER_ROLE, _newOrganizer);
         _revokeRole(LOTTERY_ORGANIZER_ROLE, organizer);
 
@@ -602,15 +709,22 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
     /**
      * @inheritdoc ILottery
      */
-    function changeNftFallbackRecipient(address _newNftFallbackRecipient) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
-        emit NftFallbackRecipientChanged(nftFallbackRecipient, _newNftFallbackRecipient);
+    function changeNftFallbackRecipient(
+        address _newNftFallbackRecipient
+    ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
+        emit NftFallbackRecipientChanged(
+            nftFallbackRecipient,
+            _newNftFallbackRecipient
+        );
         _setNftFallbackRecipient(_newNftFallbackRecipient);
     }
 
     /**
      * @inheritdoc ILottery
      */
-    function setTicketPrice(uint256 _newTicketPrice) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
+    function setTicketPrice(
+        uint256 _newTicketPrice
+    ) external onlyRole(LOTTERY_ORGANIZER_ROLE) {
         Types.LotteryStatus currentStatus = _status();
         require(
             currentStatus == Types.LotteryStatus.Closed,
@@ -632,7 +746,8 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
         /* requestId */
         uint256[] calldata randomWords
     ) internal virtual override {
-        uint256 winnerTicketId = (randomWords[0] % _state.totalTicketsCount) + 1;
+        uint256 winnerTicketId = (randomWords[0] % _state.totalTicketsCount) +
+            1;
         address winner = _findWinnerFromUsers(winnerTicketId);
 
         lastWinner = winner;
@@ -641,8 +756,7 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
 
         delete _state;
 
-        try GUIDE_DAO_TOKEN.mintTo(winner) {}
-        catch {
+        try GUIDE_DAO_TOKEN.mintTo(winner) {} catch {
             GUIDE_DAO_TOKEN.mintTo(nftFallbackRecipient);
         }
 
@@ -669,7 +783,10 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
      */
     function _status() private view returns (Types.LotteryStatus) {
         if (!_state.wasStarted) return Types.LotteryStatus.Closed;
-        if (block.timestamp < _state.registrationEndTime && _state.participantsCount < MAX_PARTICIPANTS_NUMBER) {
+        if (
+            block.timestamp < _state.registrationEndTime &&
+            _state.participantsCount < MAX_PARTICIPANTS_NUMBER
+        ) {
             return Types.LotteryStatus.OpenedForRegistration;
         }
         if (_state.participantsCount < TARGET_PARTICIPANTS_NUMBER) {
@@ -687,12 +804,15 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
      * @dev Returns NFT fallback recipient address, if total tickets amount is less than
      * winner ticket id, which should really never happen.
      */
-    function _findWinnerFromUsers(uint256 _winnerTicketId) internal view returns (address) {
+    function _findWinnerFromUsers(
+        uint256 _winnerTicketId
+    ) internal view returns (address) {
         uint256 cumulativeTickets = 0;
 
         for (uint256 i = 0; i < _state.participantsCount; i++) {
             address participant = participants[lotteryNumber][i];
-            cumulativeTickets += participantsInfo[lotteryNumber][participant].ticketsBought;
+            cumulativeTickets += participantsInfo[lotteryNumber][participant]
+                .ticketsBought;
 
             if (_winnerTicketId <= cumulativeTickets) {
                 return participant;
@@ -709,8 +829,14 @@ contract Lottery is ILottery, ILotteryErrors, VRFConsumerBaseV2Plus, AccessContr
     }
 
     function _setNftFallbackRecipient(address _nftFallbackRecipient) internal {
-        require(_nftFallbackRecipient != address(0), ZeroNftFallbackRecipientAddress());
-        require(_nftFallbackRecipient.code.length == 0, HasCode(_nftFallbackRecipient));
+        require(
+            _nftFallbackRecipient != address(0),
+            ZeroNftFallbackRecipientAddress()
+        );
+        require(
+            _nftFallbackRecipient.code.length == 0,
+            HasCode(_nftFallbackRecipient)
+        );
 
         nftFallbackRecipient = _nftFallbackRecipient;
     }
