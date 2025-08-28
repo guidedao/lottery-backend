@@ -221,9 +221,22 @@ contract Lottery is
     /**
      * @inheritdoc ILottery
      */
+    function totalTicketsCount() external view returns (uint256) {
+        return _state.totalTicketsCount;
+    }
+
+    /**
+     * @inheritdoc ILottery
+     */
+    function userTicketsCount(address _user) external view returns (uint256) {
+        return _userTicketsCount(_user);
+    }
+
+    /**
+     * @inheritdoc ILottery
+     */
     function isActualParticipant(address _user) external view returns (bool) {
-        return (_status() != Types.LotteryStatus.Closed &&
-            participantsInfo[lotteryNumber][_user].ticketsBought > 0);
+        return _userTicketsCount(_user) > 0;
     }
 
     /**
@@ -781,7 +794,7 @@ contract Lottery is
      *     / (Yes)  (No) \
      * WaitingForReveal  RegistrationEnded
      */
-    function _status() private view returns (Types.LotteryStatus) {
+    function _status() internal view returns (Types.LotteryStatus) {
         if (!_state.wasStarted) return Types.LotteryStatus.Closed;
         if (
             block.timestamp < _state.registrationEndTime &&
@@ -797,6 +810,14 @@ contract Lottery is
         } else {
             return Types.LotteryStatus.RegistrationEnded;
         }
+    }
+
+    function _userTicketsCount(address _user) internal view returns (uint256) {
+        return (
+            _status() == Types.LotteryStatus.Closed
+                ? 0
+                : participantsInfo[lotteryNumber][_user].ticketsBought
+        );
     }
 
     /**

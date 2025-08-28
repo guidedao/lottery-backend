@@ -124,6 +124,18 @@ interface ILottery {
     function participantsCount() external view returns (uint256);
 
     /**
+     * @notice Returns total amount of tickets sold in current
+     * lottery. Returns zero if there is no such ongoing one.
+     */
+    function totalTicketsCount() external view returns (uint256);
+
+    /**
+     * @notice Returns amount of tickets bought by particular user in current
+     * lottery. Returns zero if there is no such ongoing one.
+     */
+    function userTicketsCount(address _user) external view returns (uint256);
+
+    /**
      * @notice Returns true only if the lottery is active and given user
      * is its participant.
      */
@@ -313,11 +325,8 @@ interface ILottery {
     function changeOrganizer(address _newOrganizer) external;
 
     /**
-     * @notice Change current organizer.
-     * @dev Revokes organizer role from current organizer
-     * and grants such to a new one.
-     *
-     * Emits {OrganizerChanged}.
+     * @notice Change current NFT fallback recipient.
+     * @dev Emits {NftFallbackRecipientChanged}.
      *
      * Requirements:
      * - Caller is current organizer

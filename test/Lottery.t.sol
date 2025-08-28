@@ -1688,6 +1688,80 @@ contract LotteryTest is Test {
         lottery.latestContactDetails(participant);
     }
 
+    function test_totalTicketsCount_ReturnsCorrectTotalTicketsCount() external {
+        /* Before lottery */
+        vm.assertEq(lottery.totalTicketsCount(), 0);
+
+        lottery.start();
+
+        uint256 ticketPrice = lottery.ticketPrice();
+
+        for (uint i = 0; i < LotteryConfig.MAX_PARTICIPANTS_NUMBER; i++) {
+            hoax(participants[i]);
+            lottery.enter{value: 2 * ticketPrice}(2, "@somecontactdetails");
+
+            /* After new participant has entered */
+            vm.assertEq(lottery.totalTicketsCount(), (i + 1) * 2);
+        }
+
+        lottery.requestWinner();
+        vrfCoordinator.fulfillRandomWords(1, address(lottery));
+
+        /* After lottery */
+        vm.assertEq(lottery.totalTicketsCount(), 0);
+    }
+
+    function test_userTicketsAmount_ReturnsCorrectUserTicketsTotalCount()
+        external
+    {
+        address participant = participants[0];
+
+        /* Before lottery */
+        vm.assertEq(lottery.userTicketsCount(participant), 0);
+
+        uint256 ticketPrice = lottery.ticketPrice();
+
+        lottery.start();
+
+        for (uint i = 0; i < LotteryConfig.TARGET_PARTICIPANTS_NUMBER; i++) {
+            hoax(participants[i]);
+            lottery.enter{value: 2 * ticketPrice}(2, "@somecontactdetails");
+
+            /* For every new participant */
+            vm.assertEq(lottery.userTicketsCount(participants[i]), 2);
+        }
+
+        uint256 previousTicketsCount = lottery.userTicketsCount(participant);
+
+        hoax(participant);
+        lottery.buyMoreTickets{value: 3 * ticketPrice}(3);
+
+        /* After buying more */
+        vm.assertEq(
+            lottery.userTicketsCount(participant),
+            previousTicketsCount + 3
+        );
+
+        previousTicketsCount = lottery.userTicketsCount(participant);
+
+        vm.prank(participant);
+        lottery.returnTickets(2);
+
+        /* After return */
+        vm.assertEq(
+            lottery.userTicketsCount(participant),
+            previousTicketsCount - 2
+        );
+
+        vm.warp(lottery.registrationEndTime());
+
+        lottery.requestWinner();
+        vrfCoordinator.fulfillRandomWords(1, address(lottery));
+
+        /* After lottery */
+        vm.assertEq(lottery.userTicketsCount(participant), 0);
+    }
+
     function test_changeOrganizer_AllowsToChange() external {
         address newOrganizer = participants[0];
 
