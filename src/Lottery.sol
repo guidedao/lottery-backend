@@ -423,30 +423,12 @@ contract Lottery is
             )
         );
 
-        LotteryState storage state = _state;
-
         actualParticipantsInfo[msg.sender].ticketsBought -= _amount;
 
         _state.totalTicketsCount -= _amount;
 
         if (actualParticipantsInfo[msg.sender].ticketsBought == 0) {
-            uint256 participantIndex = actualParticipantsInfo[msg.sender]
-                .participantIndex;
-
-            mapping(uint256 index => address)
-                storage actualParticipants = participants[lotteryNumber];
-
-            if (participantIndex != state.participantsCount - 1) {
-                actualParticipants[participantIndex] = actualParticipants[
-                    state.participantsCount - 1
-                ];
-
-                address movedParticipant = actualParticipants[participantIndex];
-                actualParticipantsInfo[movedParticipant]
-                    .participantIndex = participantIndex;
-            }
-
-            delete actualParticipants[--state.participantsCount];
+            _removeParticipant(msg.sender);
         }
 
         emit TicketsReturned(lotteryNumber, msg.sender, _amount);
@@ -756,32 +738,6 @@ contract Lottery is
     }
 
     /**
-     * @dev Callback to receive random words from
-     * Chainlink oracle.
-     */
-    function fulfillRandomWords(
-        uint256,
-        /* requestId */
-        uint256[] calldata randomWords
-    ) internal virtual override {
-        uint256 winnerTicketId = (randomWords[0] % _state.totalTicketsCount) +
-            1;
-        address winner = _findWinnerFromUsers(winnerTicketId);
-
-        lastWinner = winner;
-
-        organizerFunds += _state.totalTicketsCount * ticketPrice;
-
-        delete _state;
-
-        try GUIDE_DAO_TOKEN.mintTo(winner) {} catch {
-            GUIDE_DAO_TOKEN.mintTo(nftFallbackRecipient);
-        }
-
-        emit WinnerRevealed(lotteryNumber, winner, block.timestamp);
-    }
-
-    /**
      * @dev Derives current lottery status.
      *
      *                  Lottery was started?
@@ -846,6 +802,57 @@ contract Lottery is
         }
 
         return nftFallbackRecipient;
+    }
+
+    /**
+     * @dev Callback to receive random words from
+     * Chainlink oracle.
+     */
+    function fulfillRandomWords(
+        uint256,
+        /* requestId */
+        uint256[] calldata randomWords
+    ) internal virtual override {
+        uint256 winnerTicketId = (randomWords[0] % _state.totalTicketsCount) +
+            1;
+        address winner = _findWinnerFromUsers(winnerTicketId);
+
+        lastWinner = winner;
+
+        organizerFunds += _state.totalTicketsCount * ticketPrice;
+
+        delete _state;
+
+        try GUIDE_DAO_TOKEN.mintTo(winner) {} catch {
+            GUIDE_DAO_TOKEN.mintTo(nftFallbackRecipient);
+        }
+
+        emit WinnerRevealed(lotteryNumber, winner, block.timestamp);
+    }
+
+    function _removeParticipant(address _participant) internal {
+        LotteryState storage state = _state;
+
+        mapping(address participant => ParticipantInfo)
+            storage actualParticipantsInfo = participantsInfo[lotteryNumber];
+        mapping(uint256 index => address)
+            storage actualParticipants = participants[lotteryNumber];
+
+        uint256 participantIndex = actualParticipantsInfo[_participant]
+            .participantIndex;
+        uint256 lastIndex = --state.participantsCount;
+
+        if (participantIndex != lastIndex) {
+            actualParticipants[participantIndex] = actualParticipants[
+                lastIndex
+            ];
+            address movedParticipant = actualParticipants[participantIndex];
+            actualParticipantsInfo[movedParticipant]
+                .participantIndex = participantIndex;
+        }
+
+        delete actualParticipants[lastIndex];
+        delete actualParticipantsInfo[_participant];
     }
 
     function _setOrganizer(address _organizer) internal {
