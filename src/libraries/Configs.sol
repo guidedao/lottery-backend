@@ -33,7 +33,7 @@ library VRFCoordinatorMockConfig {
  */
 library VRFConsumerConfig {
     bytes32 constant KEY_HASH =
-        0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae;
+        0x1770bdc7eec7771f7ba4ffd640f34260d7f095b79c92d34a5b2551d6f6cfd2be;
     uint32 constant CALLBACK_GAS_LIMIT = 1500000;
     uint16 constant REQUEST_CONFIRMATIONS = 3;
 }
@@ -43,8 +43,8 @@ library VRFConsumerConfig {
  * essential business logic variables.
  */
 library LotteryConfig {
-    uint256 constant INITIAL_TICKET_PRICE = 0.02 ether;
-    uint8 constant TARGET_PARTICIPANTS_NUMBER = 20;
+    uint256 constant INITIAL_TICKET_PRICE = 0.000000001 ether;
+    uint8 constant TARGET_PARTICIPANTS_NUMBER = 2;
     uint16 constant MAX_PARTICIPANTS_NUMBER = 200;
     uint256 constant REGISTRATION_DURATION = 21 days;
     uint256 constant MAX_EXTENSION_TIME = 7 days;
