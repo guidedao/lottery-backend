@@ -19,6 +19,11 @@ interface ILotteryErrors {
     error HasCode(address caller);
 
     /**
+     * @notice Attached contact details bytes array has zero length.
+     */
+    error ZeroLengthContactDetails();
+
+    /**
      * @notice The amount of ether sent is not enough or too large.
      */
     error IncorrectPaymentAmount(address sender, uint256 sent, uint256 needed);

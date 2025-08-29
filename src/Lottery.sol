@@ -338,6 +338,11 @@ contract Lottery is
             )
         );
 
+        require(
+            _encryptedContactDetails.length > 0,
+            ZeroLengthContactDetails()
+        );
+
         LotteryState storage state = _state;
 
         mapping(uint256 index => address)

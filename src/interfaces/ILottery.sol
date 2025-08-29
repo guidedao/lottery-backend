@@ -193,6 +193,7 @@ interface ILottery {
      * - New total number of participants must not exceed the limit
      * - Registration is currently open
      * - The sent ether is sufficient to buy given tickets amount
+     * - `_encryptedContactDetails` length is not zero
      */
     function enter(
         uint256 _ticketsAmount,

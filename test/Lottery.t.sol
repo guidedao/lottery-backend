@@ -438,6 +438,26 @@ contract LotteryTest is Test {
         lottery.enter(0, "@somecontactdetails");
     }
 
+    function test_enter_RevertsIfTryingToEnterWithZeroLengthContactDetails()
+        external
+    {
+        lottery.start();
+
+        address participant = participants[0];
+
+        uint ticketPrice = lottery.ticketPrice();
+
+        startHoax(participant);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ILotteryErrors.ZeroLengthContactDetails.selector,
+                participant
+            )
+        );
+        lottery.enter{value: ticketPrice}(1, "");
+    }
+
     function test_enter_RevertsIfPaymentAmountIsIncorrect() external {
         lottery.start();
 
