@@ -34,9 +34,9 @@ contract MocksDeployScript is Script {
         vm.stopBroadcast();
 
         console.log(
-            "VRF coordinator mock deployed to: ",
+            "VRF coordinator mock deployed to:",
             address(vrfCoordinatorMock)
         );
-        console.log("GuideDAO token mock deployed to: ", address(tokenMock));
+        console.log("GuideDAO token mock deployed to:", address(tokenMock));
     }
 }

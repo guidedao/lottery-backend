@@ -45,9 +45,9 @@ contract FundSubscriptionScript is Script {
 
         vm.stopBroadcast();
 
-        console.log("Active subscription id: ", subscriptionId);
+        console.log("Active subscription id:", subscriptionId);
         console.log(
-            "Current consumer balance in Juels (1e-18 LINK): ",
+            "Current consumer balance in Juels (1e-18 LINK):",
             balanceInLink
         );
     }

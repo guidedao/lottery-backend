@@ -8,9 +8,25 @@ import {Types} from "../libraries/Types.sol";
  */
 interface ILotteryErrors {
     /**
-     * @notice The amount of ether sent is not enough.
+     * @notice There are no contact details about this particular user
+     * or they are stale.
      */
-    error InsufficientFunds(address sender, uint256 sent, uint256 needed);
+    error NoContactDetails(address user);
+
+    /**
+     * @notice `caller` account has code.
+     */
+    error HasCode(address caller);
+
+    /**
+     * @notice Attached contact details bytes array has zero length.
+     */
+    error ZeroLengthContactDetails();
+
+    /**
+     * @notice The amount of ether sent is not enough or too large.
+     */
+    error IncorrectPaymentAmount(address sender, uint256 sent, uint256 needed);
 
     /**
      * @notice The `participant` has already registered in the lottery.
@@ -26,12 +42,6 @@ interface ILotteryErrors {
      * @notice `caller` already has GuideDAO NFT.
      */
     error AlreadyHasToken(address caller);
-
-    /**
-     * @notice New user cannot enter the lottery, since participants
-     * limit has been already reached.
-     */
-    error ParticipantsLimitExceeded(uint limit);
 
     /**
      * @notice The `caller` has not entered the lottery before.
@@ -90,6 +100,11 @@ interface ILotteryErrors {
      * @notice Unable to change organizer address to zero.
      */
     error ZeroOrganizerAddress();
+
+    /**
+     * @notice Unable to change NFT fallback recipient address to zero.
+     */
+    error ZeroNftFallbackRecipientAddress();
 
     /**
      * @notice Unable to change ticket price to zero.
