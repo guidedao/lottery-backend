@@ -8,6 +8,29 @@ Full information is available in the [wiki](https://github.com/guidedao/lottery-
 
 This project is built with **Foundry** framework for Solidity, so you can use all the tools included.
 
+Here are all the configuration values for the contracts (src/libraries/Configs.sol):
+
+```Solidity
+// Details: https://docs.chain.link/vrf/v2-5/overview/subscription
+library VRFConsumerConfig {
+    bytes32 constant KEY_HASH = <...>;
+    uint32 constant CALLBACK_GAS_LIMIT = <...>;
+    uint16 constant REQUEST_CONFIRMATIONS = <...>;
+}
+
+// Business logic
+library LotteryConfig {
+    uint256 constant INITIAL_TICKET_PRICE = <...>;
+    uint8 constant TARGET_PARTICIPANTS_NUMBER = <...>;
+    uint16 constant MAX_PARTICIPANTS_NUMBER = <...>;
+    uint256 constant REGISTRATION_DURATION = <...>;
+    uint256 constant MAX_EXTENSION_TIME = <...>;
+    uint256 constant REFUND_WINDOW = <...>;
+}
+```
+
+You probably won't need to change anything for setting up locally, however, you can do that if you want.
+
 ### Running Locally
 
 First, open two terminal tabs and run a local Ethereum node in any of them:
@@ -46,51 +69,23 @@ You will instantly need the VRF coordinator address to fund a subscription and r
 forge script script/local/FundSubscription.s.sol:FundSubscriptionScript --rpc-url http://localhost:8545 --broadcast --private-key <PRIVATE_KEY>
 ```
 
-Now you can properly set the VRF consumer config ([details](https://docs.chain.link/vrf/v2-5/overview/subscription)). You can also set ORGANIZER to your address if you want to conveniently work with results of functions, responsible for financial operations (e.g. withdrawOrganizerFunds or collectExpiredRefunds):
-
-```Solidity
-// src/libraries/Configs.sol
-
-library VRFConsumerConfig  {
-  // Both taken from {MocksDeployScript} logs (or
-  // Chainlink Subscription Manager if not testing locally)
-  address constant VRF_COORDINATOR = <COORDINATOR_ADDRESS>
-  uint256 constant SUBSCRIPTION_ID = <SUBSCRIPTION_ID>
-
-  // Indicates maximum gas price you are willing to pay,
-  // use arbitrary bytes32 value if running locally
-  bytes32 constant KEY_HASH = <KEY_HASH>
-  // ...
-}
-//...
-library LotteryConfig {
-  // You can also set this to your address
-  // during local testing if needed
-  address ORGANIZER = <ORGANIZER_ADDRESS>
-}
-```
-
-Don't forget to save changes.
-
-Then you have will have to deploy the lottery contract:
+Then you have will have to deploy the lottery contract (you will have to specify initial organizer and GuideDAO token address along with VRF coordinator address and subscription ID):
 
 ```bash
-// You will be asked to enter GuideDAO token address
 forge script script/LotteryDeploy.s.sol:LotteryDeployScript --rpc-url http://localhost:8545 --broadcast --private-key <PRIVATE_KEY>
 ```
 
-And add the lottery in VRF consumers list:
+And add the lottery in VRF consumers list (now you will need to provide the lottery, GuideDAO NFT fallback recipient and coordinator addresses and corresponding subscription ID):
 
 ```bash
-// Now you will need to provide the lottery address
-forge script script/AddConsumer.s.sol:AddConsumerScript --rpc-url http://localhost:8545 --broadcast --private-key <PRIVATE_KEY>
+forge script script/local/AddConsumer.s.sol:AddConsumerScript --rpc-url http://localhost:8545 --broadcast --private-key <PRIVATE_KEY>
 ```
 
 Now you have fully prepared local chain, and you can use [http://localhost:8545](http://localhost:8545) as RPC URL for your purposes.
 
 ### Running in production or public testnets
 
-In this case you will only have to set config values (VRFConsumer, taken from Chainlink Subscription Manager, and lottery), and deploy the lottery contract in the same way as above.
+In this case you will only have to deploy the lottery contract in the same way as above.
 
 ## Code Quality
 
@@ -98,6 +93,27 @@ To check code for linting errors, run:
 
 ```bash
 solhint ./**/*.sol
+```
+
+## Tests
+
+To run tests, use:
+
+```bash
+forge test
+```
+
+To see tests coverage, use:
+
+```bash
+forge coverage
+```
+
+Or if you want to get detailed HTML report:
+
+```bash
+mnkdir coverage
+forge coverage  --report lcov --report-file coverage/lcov.info && genhtml coverage/lcov.info --branch-coverage --output-dir coverage
 ```
 
 ## Project Structure
