@@ -1018,7 +1018,7 @@ contract LotteryTest is Test {
 
         vm.assertTrue(lottery.status() == Types.LotteryStatus.Closed);
 
-        address lastWinner = lottery.lastWinner();
+        address lastWinner = lottery.lotteryWinner(lottery.lotteryNumber());
 
         vm.assertNotEq(lastWinner, address(0));
         vm.assertNotEq(lastWinner, lottery.nftFallbackRecipient());
@@ -1057,7 +1057,7 @@ contract LotteryTest is Test {
         lottery.requestWinner();
         vrfCoordinator.fulfillRandomWords(1, address(lottery));
 
-        address lastWinner = lottery.lastWinner();
+        address lastWinner = lottery.lotteryWinner(lottery.lotteryNumber());
 
         vm.assertNotEq(lastWinner, address(0));
         vm.assertNotEq(lastWinner, nftFallbackRecipient);
