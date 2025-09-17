@@ -137,6 +137,11 @@ contract Lottery is
         public participantsInfo;
 
     /**
+     * @inheritdoc ILottery
+     */
+    mapping(uint lotteryNumber => address) public lotteryWinner;
+
+    /**
      * @notice Returns refund batch by its id.
      * Important to notice that there is always one refund batch per
      * one invalid lottery.
@@ -162,8 +167,6 @@ contract Lottery is
      * @dev Updated in {fulfillRandomWords}.
      */
     uint256 public organizerFunds;
-
-    address public lastWinner;
 
     /**
      * @notice Data about participants of lottery with `lotteryNumber` number (specifically
@@ -817,7 +820,7 @@ contract Lottery is
             1;
         address winner = _findWinnerFromUsers(winnerTicketId);
 
-        lastWinner = winner;
+        lotteryWinner[lotteryNumber] = winner;
 
         organizerFunds += _state.totalTicketsCount * ticketPrice;
 
@@ -843,11 +846,9 @@ contract Lottery is
         uint256 lastIndex = --state.participantsCount;
 
         if (participantIndex != lastIndex) {
-            actualParticipants[participantIndex] = actualParticipants[
-                lastIndex
-            ];
-            address movedParticipant = actualParticipants[participantIndex];
-            actualParticipantsInfo[movedParticipant]
+            address participantToBeMoved = actualParticipants[lastIndex];
+            actualParticipants[participantIndex] = participantToBeMoved;
+            actualParticipantsInfo[participantToBeMoved]
                 .participantIndex = participantIndex;
         }
 

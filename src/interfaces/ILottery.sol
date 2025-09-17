@@ -165,10 +165,11 @@ interface ILottery {
     function status() external view returns (Types.LotteryStatus);
 
     /**
-     * @notice Returns last winner of the lottery.
-     * @dev Returns address(0) before first start.
+     * @notice Returns winner of given lottery.
+     * @dev Returns address(0) if there is no such lottery or
+     * it was declared invalid.
      */
-    function lastWinner() external view returns (address);
+    function lotteryWinner(uint lotteryNumber) external view returns (address);
 
     /**
      * @notice Returns timestamp of expected lottery ending.
